@@ -6311,6 +6311,21 @@
     color: #ffffff !important;
   }
 
+  /* 디지털도서관 버튼 - 틸/에메랄드 */
+  .quick-nav-btn-library {
+    background-color: #0f766e !important;
+    color: #ffffff !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 0 !important;
+  }
+  .quick-nav-btn-library:hover {
+    background-color: #115e59 !important;
+    transform: scale(1.05);
+  }
+  .quick-nav-btn-library .q-text {
+    color: #ffffff !important;
+  }
+
   /* POPUP 버튼 - 청록/시안 (메타버스 녹색과 구분) */
   .quick-nav-btn-popup {
     background-color: #0891b2 !important;
