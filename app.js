@@ -280,10 +280,12 @@
 
     /* ════════════════════════════════════════════════════════════
      [HOMEPAGE BGM MODULE] 홈페이지 배경음악 엔진
-     - 랜딩 진입 시 getLandingData()의 bgmHomepageId를 받아 Base64로 비동기 로드
+     - 기본값은 "켜짐(음소거 아님)" 상태이며, 접속 즉시 재생을 시도한다.
+     - 재방문: 음원을 브라우저(IndexedDB)에 저장해 두고 서버 응답을 기다리지 않고 즉시 재생
      - 브라우저 자동재생(Autoplay) 정책 대응:
-       1) 로드 완료 즉시 play() 시도
-       2) 브라우저 차단 시 사용자 첫 클릭/터치/스크롤 제스처 시 즉시 자동 언락 & 재생
+       1) 음원이 준비되면 즉시 play() 시도
+       2) 차단되면 안내 말풍선을 띄우고, 화면 어디든 첫 클릭/터치/키 입력 시 즉시 재생
+          (음원 로딩이 끝나기 전에 클릭해도 로딩 완료 즉시 재생)
        3) 좌측 하단 플로팅 버튼으로 수동 ON/OFF 토글 가능
      - 메타버스 진입 시 홈페이지 BGM 즉시 정지
   ════════════════════════════════════════════════════════════ */
@@ -291,16 +293,77 @@
     el: null,
     ready: false,
     userInteracted: false,
+    wantPlay: true,
+    suspended: false,
+    currentId: '',
+    _bound: false,
     init() {
       if (this.el) return;
       this.el = document.getElementById('homepage-bgm');
       if (!this.el) return;
       this.el.volume = 0.35;
       this.el.loop = true;
+      this.bindGesture();
+    },
+    bindGesture() {
+      if (this._bound) return;
+      this._bound = true;
+      const unlock = (e) => {
+        if (e && e.target && e.target.closest && e.target.closest('#homepage-bgm-btn')) return;
+        this.userInteracted = true;
+        if (this.wantPlay && !this.suspended && this.ready && this.el.paused) {
+          this.el.play().then(() => { this.hideHint(); this.updateIcon(); }).catch(() => {});
+        }
+      };
+      ['pointerup', 'click', 'touchend', 'keydown'].forEach(evt => window.addEventListener(evt, unlock, true));
+    },
+    _db() {
+      return new Promise((resolve, reject) => {
+        try {
+          const req = indexedDB.open('hp_bgm_cache', 1);
+          req.onupgradeneeded = () => req.result.createObjectStore('audio');
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        } catch (e) { reject(e); }
+      });
+    },
+    cacheGet(id) {
+      return this._db().then(db => new Promise(resolve => {
+        const r = db.transaction('audio').objectStore('audio').get(id);
+        r.onsuccess = () => resolve(r.result || null);
+        r.onerror = () => resolve(null);
+      })).catch(() => null);
+    },
+    cachePut(id, val) {
+      this._db().then(db => {
+        const tx = db.transaction('audio', 'readwrite');
+        tx.objectStore('audio').clear();
+        tx.objectStore('audio').put(val, id);
+      }).catch(() => {});
+    },
+    boot() {
+      this.init();
+      let id = '';
+      try { id = localStorage.getItem('hp_bgm_id') || ''; } catch (e) { }
+      if (!id) return;
+      this.cacheGet(id).then(v => {
+        if (v && v.base64 && !this.ready) {
+          this.currentId = id;
+          this.setSource(v.mimeType, v.base64);
+        }
+      });
+    },
+    setSource(mimeType, base64) {
+      this.el.src = 'data:' + mimeType + ';base64,' + base64;
+      this.ready = true;
+      const btn = document.getElementById('homepage-bgm-btn');
+      if (btn) btn.style.display = 'flex';
+      if (!this.suspended) this.play();
     },
     loadFromFileId(fileId) {
       this.init();
       if (!this.el || !fileId) return;
+      if (this.ready && this.currentId === fileId) return;
       if (typeof google === 'undefined' || !google.script) return;
       google.script.run
         .withSuccessHandler(res => {
@@ -308,11 +371,10 @@
             console.warn('[HP_BGM] 음원 로드 실패:', res && res.error);
             return;
           }
-          this.el.src = 'data:' + res.mimeType + ';base64,' + res.base64;
-          this.ready = true;
-          const btn = document.getElementById('homepage-bgm-btn');
-          if (btn) btn.style.display = 'flex';
-          this.play();
+          this.currentId = fileId;
+          try { localStorage.setItem('hp_bgm_id', fileId); } catch (e) { }
+          this.cachePut(fileId, { mimeType: res.mimeType, base64: res.base64 });
+          this.setSource(res.mimeType, res.base64);
         })
         .withFailureHandler(err => console.warn('[HP_BGM] 음원 요청 실패:', err))
         .getAudioBase64(fileId);
@@ -320,30 +382,27 @@
     play() {
       this.init();
       if (!this.el || !this.ready) return;
+      this.wantPlay = true;
       this.el.play().then(() => {
+        this.hideHint();
         this.updateIcon();
-      }).catch(err => {
-        // 브라우저 자동재생 차단 시 첫 사용자 제스처 대기
+      }).catch(() => {
+        // 브라우저 자동재생 차단: 안내 후 첫 사용자 제스처 때 재생
         this.updateIcon();
-        if (!this.userInteracted) {
-          const unlock = () => {
-            this.userInteracted = true;
-            if (this.el && this.el.paused && this.ready) {
-              this.el.play().then(() => this.updateIcon()).catch(() => {});
-            }
-            ['click', 'touchstart', 'keydown'].forEach(evt => window.removeEventListener(evt, unlock));
-          };
-          ['click', 'touchstart', 'keydown'].forEach(evt => window.addEventListener(evt, unlock, { once: true }));
-        }
+        if (!this.userInteracted) this.showHint();
       });
     },
     stop() {
+      this.suspended = true;
+      this.hideHint();
       if (!this.el) return;
       this.el.pause();
       this.el.currentTime = 0;
       this.updateIcon();
     },
     pause() {
+      this.wantPlay = false;
+      this.hideHint();
       if (!this.el) return;
       this.el.pause();
       this.updateIcon();
@@ -351,19 +410,36 @@
     toggle() {
       this.init();
       if (!this.el || !this.ready) return;
+      this.suspended = false;
       if (this.el.paused) {
         this.play();
       } else {
         this.pause();
       }
     },
+    showHint() {
+      let h = document.getElementById('homepage-bgm-hint');
+      if (!h) {
+        h = document.createElement('div');
+        h.id = 'homepage-bgm-hint';
+        h.textContent = '🎵 화면을 한 번 터치(클릭)하면 배경음악이 시작됩니다';
+        document.body.appendChild(h);
+      }
+      h.classList.add('show');
+    },
+    hideHint() {
+      const h = document.getElementById('homepage-bgm-hint');
+      if (h) h.classList.remove('show');
+    },
     updateIcon() {
       const btn = document.getElementById('homepage-bgm-btn');
       if (!btn) return;
       const playing = !!(this.el && !this.el.paused);
+      const on = playing || (this.wantPlay && !this.suspended);
       const icon = btn.querySelector('.hp-bgm-icon');
-      btn.classList.toggle('muted', !playing);
-      if (icon) icon.textContent = playing ? '🎵' : '🔇';
+      btn.classList.toggle('muted', !on);
+      btn.classList.toggle('pending', on && !playing);
+      if (icon) icon.textContent = on ? '🎵' : '🔇';
     }
   };
 
@@ -1708,6 +1784,9 @@
   /**
    * [v23.0] 초경량 랜딩 데이터 사전 로딩 — 홈페이지 즉시 표시용
    */
+  // [BGM] 재방문자는 저장된 음원으로 서버 응답 전에 즉시 재생 시도
+  try { HOMEPAGE_BGM.boot(); } catch (e) { console.warn('[HP_BGM] boot 오류:', e); }
+
   (function setup() {
     if (typeof google !== 'undefined' && google.script) {
       google.script.run.withSuccessHandler(data => {

@@ -5338,6 +5338,46 @@
     box-shadow: 0 0 15px rgba(16, 185, 129, 0.45), 0 4px 15px rgba(0, 0, 0, 0.3);
   }
 
+  #homepage-bgm-btn.pending {
+    animation: hpBgmPulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes hpBgmPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55), 0 4px 15px rgba(0, 0, 0, 0.3); }
+    50% { box-shadow: 0 0 0 12px rgba(52, 211, 153, 0), 0 4px 15px rgba(0, 0, 0, 0.3); }
+  }
+
+  #homepage-bgm-hint {
+    position: fixed;
+    bottom: 92px;
+    left: 85px;
+    max-width: calc(100vw - 110px);
+    padding: 9px 14px;
+    background: rgba(15, 23, 42, 0.88);
+    color: #fff;
+    font-size: 13px;
+    border-radius: 12px;
+    border: 1px solid rgba(52, 211, 153, 0.5);
+    z-index: 999999;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-6px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+
+  #homepage-bgm-hint.show {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  @media (max-width: 768px) {
+    #homepage-bgm-hint {
+      bottom: 74px;
+      left: 70px;
+      font-size: 12px;
+    }
+  }
+
   #homepage-bgm-btn:hover {
     transform: translateY(-3px) scale(1.05);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
