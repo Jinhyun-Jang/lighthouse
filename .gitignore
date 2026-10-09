@@ -1,0 +1,8 @@
+﻿# 구글 드라이브 링크 파일
+*.gsheet
+*.gdoc
+*.gslides
+
+# 시스템 파일
+.DS_Store
+Thumbs.db

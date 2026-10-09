@@ -1,0 +1,1003 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="naver-site-verification" content="0ec9e0800331d6a3714b7c38b155a51d44aad967" />
+
+  <meta name="description" content="장애인 거주시설 등대의집 홈페이지입니다. 따뜻한 사랑과 나눔이 있는 곳입니다.">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="등대의집">
+  <meta property="og:description" content="함께하는 행복, 장애인 거주시설 등대의집입니다.">
+  <meta property="og:url" content="https://light4u.kr">
+  <title>등대의집</title>
+  <!-- [수정] Firebase SDK: head 안으로 이동 (HTML 구조 오류 수정) -->
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+  <link rel="stylesheet" href="style.css">
+<script>
+    // [보강] 자바스크립트 로딩 전부터 에러 감시 (글로벌 감시용)
+    window.onerror = function (msg, url, line) {
+      const errLog = document.getElementById('error-log');
+      if (errLog) {
+        errLog.style.display = 'block';
+        errLog.style.background = 'rgba(220, 20, 20, 0.9)';
+        errLog.innerText = `⚠️ 로직 에러: ${msg} (라인: ${line})`;
+      }
+    };
+  </script>
+</head>
+
+<body>
+  <!-- [v33.5] 명예의 전당 카드 이미지 프리로딩 (지연 현상 방지) -->
+  <div style="display: none; visibility: hidden; width: 0; height: 0; overflow: hidden;">
+    <img src="https://drive.google.com/thumbnail?id=1z1tiTy4bVmU70X2OGpHe6wE4QInVh-uY&sz=w1000">
+    <img src="https://drive.google.com/thumbnail?id=1_wkRywF7IpOK8f7sPpV13as4G-Spzw4h&sz=w1000">
+    <img src="https://drive.google.com/thumbnail?id=1163EvMgfYMzcikn4P2DnACsyGlh1J3aL&sz=w1000">
+    <img src="https://drive.google.com/thumbnail?id=1pIdz3-ilr17PIKVUv2ACMbtlpwsRMSUK&sz=w1000">
+    <img src="https://drive.google.com/thumbnail?id=1kbVPj4uxkJglNQq7vpEw6ZnLPKwdOpzv&sz=w1000">
+  </div>
+
+  <!-- [v30.0] 프리미엄 하이엔드 팝업 (평택대 스타일 - 프레임리스) -->
+  <div id="main-notice-popup" class="ptu-popup-overlay">
+
+    <!-- [v32.6] 3개 초과 스크롤 지원 캐러셀 래퍼 -->
+    <div class="ptu-carousel-wrapper">
+      <button id="ptu-arrow-left" class="ptu-arrow ptu-arrow-left" onclick="scrollPtu(-1)"
+        style="display:none;">‹</button>
+
+      <div id="ptu-banner-viewport" class="ptu-banner-viewport">
+        <div id="ptu-banner-container" class="ptu-banner-container">
+          <!-- 팝업 이미지 배너들이 가로로 나열됩니다 -->
+        </div>
+      </div>
+
+      <button id="ptu-arrow-right" class="ptu-arrow ptu-arrow-right" onclick="scrollPtu(1)"
+        style="display:none;">›</button>
+    </div>
+
+  </div>
+
+  <!-- [v9.1] 초기 진입 프리로더 (Black & White) -->
+  <div id="preloader">
+    <div class="preloader-content">
+      <div class="preloader-spinner"></div>
+      <p class="preloader-msg">등대의집 메타버스 포털을 불러오고 있습니다.<br>잠시만 기다려 주세요.</p>
+    </div>
+  </div>
+
+  <!-- [v10.0] 프리미엄 홈페이지 래퍼 -->
+  <div id="homepage-wrap">
+
+    <!-- GNB (Global Navigation Bar) -->
+    <header id="gnb">
+      <div class="gnb-inner">
+        <a class="gnb-logo" onclick="smoothScroll('sec-hero')" style="cursor:pointer;">
+          <!-- 사용자 제공 로고 -->
+          <img src="https://drive.google.com/thumbnail?id=1SJp02KwV_yVr-5iy684H7G4kEgi57x8o&sz=w200" alt="등대의집 로고">
+          <span class="brand-text">등대의집</span>
+          <div id="header-clock" class="header-clock"></div>
+          <!-- [신규] 날씨 및 초미세먼지 위젯 -->
+          <div id="header-weather" class="header-weather">
+            <div class="weather-icon" id="weather-icon-el">☀️</div>
+            <div class="weather-info">
+              <div class="weather-temp" id="weather-temp-el">--°C</div>
+              <div class="weather-dust" id="weather-dust-el">
+                <span class="dust-dot" id="dust-dot-el"></span>
+                <span id="dust-text-el">--</span>
+              </div>
+            </div>
+          </div>
+        </a>
+
+        <!-- 모바일 햄버거 메뉴 아이콘 -->
+        <div class="hamburger" onclick="toggleMobileMenu()">
+          <span></span><span></span><span></span>
+        </div>
+
+        <nav id="gnb-nav" class="gnb-nav">
+          <ul class="gnb-list">
+            <li class="gnb-item">
+              <button class="gnb-link" onclick="smoothScroll('sec-about')">기관소개</button>
+              <div class="gnb-sub-wrap">
+                <a href="javascript:void(0)" onclick="switchAbout(0); smoothScroll('sec-about')">인사말</a>
+                <a href="javascript:void(0)" onclick="switchAbout(1); smoothScroll('sec-about')">조직 미션</a>
+                <a href="javascript:void(0)" onclick="switchAbout(2); smoothScroll('sec-about')">연혁</a>
+                <a href="javascript:void(0)" onclick="switchAbout(3); smoothScroll('sec-about')">시설 현황</a>
+                <a href="javascript:void(0)" onclick="switchAbout(4); smoothScroll('sec-about')">조직도</a>
+              </div>
+            </li>
+            <li class="gnb-item">
+              <button class="gnb-link" onclick="smoothScroll('sec-notices')">공지사항</button>
+              <div class="gnb-sub-wrap">
+                <a href="javascript:void(0)"
+                  onclick="switchNoticeCategory('채용공고'); smoothScroll('sec-notices')">채용공고</a>
+                <a href="javascript:void(0)"
+                  onclick="switchNoticeCategory('입찰/계약'); smoothScroll('sec-notices')">입찰/계약</a>
+                <a href="javascript:void(0)"
+                  onclick="switchNoticeCategory('운영/행정'); smoothScroll('sec-notices')">운영/행정</a>
+                <a href="javascript:void(0)"
+                  onclick="switchNoticeCategory('교육/프로그램'); smoothScroll('sec-notices')">교육/프로그램</a>
+                <a href="javascript:void(0)"
+                  onclick="switchNoticeCategory('소식/홍보'); smoothScroll('sec-notices')">소식/홍보</a>
+              </div>
+            </li>
+            <li class="gnb-item">
+              <button class="gnb-link" onclick="smoothScroll('sec-hof')">명예의 전당</button>
+              <div class="gnb-sub-wrap">
+                <a href="javascript:void(0)" onclick="switchHofByName('법인후원기업'); smoothScroll('sec-hof')">법인후원기업</a>
+                <a href="javascript:void(0)" onclick="switchHofByName('시설후원기업'); smoothScroll('sec-hof')">시설후원기업</a>
+                <a href="javascript:void(0)" onclick="switchHofByName('법인후원개인'); smoothScroll('sec-hof')">법인후원개인</a>
+                <a href="javascript:void(0)" onclick="switchHofByName('시설후원개인'); smoothScroll('sec-hof')">시설후원개인</a>
+              </div>
+            </li>
+            <li class="gnb-item">
+              <button class="gnb-link" onclick="smoothScroll('sec-programs')">주요 프로그램</button>
+              <div class="gnb-sub-wrap">
+                <a href="javascript:void(0)" onclick="switchProgram(0); smoothScroll('sec-programs')">일상 및 자립생활</a>
+                <a href="javascript:void(0)" onclick="switchProgram(1); smoothScroll('sec-programs')">직업 및 경제활동</a>
+                <a href="javascript:void(0)" onclick="switchProgram(2); smoothScroll('sec-programs')">건강 및 기능회복</a>
+                <a href="javascript:void(0)" onclick="switchProgram(3); smoothScroll('sec-programs')">여가 및 사회통합</a>
+                <a href="javascript:void(0)" onclick="switchProgram(4); smoothScroll('sec-programs')">소통 및 관계형성</a>
+              </div>
+            </li>
+            <!-- [순서변경] 전자소식지를 활동갤러리 앞으로 이동 -->
+            <li class="gnb-item no-sub">
+              <button class="gnb-link" onclick="smoothScroll('sec-newsletter')">전자소식지</button>
+            </li>
+            <li class="gnb-item">
+              <button class="gnb-link" onclick="smoothScroll('sec-gallery')">활동갤러리</button>
+              <div class="gnb-sub-wrap">
+                <a href="javascript:void(0)"
+                  onclick="switchGalleryCategory('일상생활'); smoothScroll('sec-gallery')">일상생활</a>
+                <a href="javascript:void(0)"
+                  onclick="switchGalleryCategory('교육/재활'); smoothScroll('sec-gallery')">교육/재활</a>
+                <a href="javascript:void(0)"
+                  onclick="switchGalleryCategory('야외활동'); smoothScroll('sec-gallery')">야외활동</a>
+                <a href="javascript:void(0)"
+                  onclick="switchGalleryCategory('행사/이벤트'); smoothScroll('sec-gallery')">행사/이벤트</a>
+                <a href="javascript:void(0)"
+                  onclick="switchGalleryCategory('나눔/소통'); smoothScroll('sec-gallery')">나눔/소통</a>
+              </div>
+            </li>
+            <!-- [관리자 전용] 모니터링 대시보드 메뉴 -->
+            <li class="gnb-item no-sub">
+              <button class="gnb-link gnb-admin-btn" onclick="openAdminAuthModal()">관리자</button>
+            </li>
+            <!-- 워크스페이스는 GNB에서 제거 → 우측 퀵 메뉴로 이동 -->
+          </ul>
+          <div class="gnb-megamenu-panel"></div>
+        </nav>
+      </div>
+    </header>
+    <!-- 모바일 메뉴 배경 레이어 -->
+    <div id="mobile-overlay" onclick="toggleMobileMenu(true)"></div>
+
+    <!-- 1. 히어로 (기존 메타버스 진입 페르소나 선택 뷰) -->
+    <section id="sec-hero" class="hero-section active">
+      <div id="landing-bg">
+        <div id="loading-spinner" class="spinner"></div>
+      </div>
+
+      <!-- [v24.8] 수직 빛의 분할 개방형 인트로 구조 -->
+      <div id="hero-intro-container" class="intro-container">
+        <div class="hero-box-wrapper">
+          <div class="overlay-content">
+            <!-- [v24.8] 무지개빛 라인 추적용 SVG (박스 내부에 고정) -->
+            <svg class="rainbow-border-svg" style="pointer-events: none !important;">
+              <rect class="rainbow-path" x="2" y="2" width="calc(100% - 4px)" height="calc(100% - 4px)" rx="40" ry="40" style="pointer-events: none !important;">
+              </rect>
+            </svg>
+            <p class="welcome-text" style="font-size: 15px; margin-bottom: 2px;">등대의집 홈페이지 방문을 환영합니다</p>
+            <h1 class="jh-logo" style="font-size: 48px; letter-spacing: -1px; margin-bottom: 15px;">DEUNGDAE METAVERSE
+            </h1>
+            <p class="subtitle"
+              style="margin-top:-5px; margin-bottom:35px; color:rgba(255,255,255,0.8); font-weight:bold; font-size: 14px;">
+              사회복지법인 예맥재단 등대의집 | 방문자 유형을 선택해주세요</p>
+
+            <!-- [Step 1] 게스트/직원 대분류 -->
+            <div id="main-choices" class="persona-grid">
+              <button class="persona-btn main-btn" onclick="showSubMenu('guest')">게스트(Guest)</button>
+              <button class="persona-btn main-btn" onclick="showSubMenu('staff')">직원(Staff)</button>
+            </div>
+
+            <!-- [Step 2-A] 게스트 하위 메뉴 -->
+            <div id="guest-menu" class="persona-grid" style="display:none;">
+              <button class="persona-btn" onclick="startMetaverse('후원자')">후원자</button>
+              <button class="persona-btn" onclick="startMetaverse('봉사자')">봉사자</button>
+              <button class="persona-btn" onclick="startMetaverse('실습생')">실습생</button>
+              <button class="persona-btn" onclick="startMetaverse('지원자')">지원자</button>
+              <button class="persona-btn" onclick="startMetaverse('보호자')">보호자 / 일반</button>
+            </div>
+
+            <!-- [Step 2-B] 직원 이름 리스트 (동적 생성) -->
+            <div id="staff-menu" class="persona-grid" style="display:none;">
+              <!-- 여기에 직원 리스트 추가됨 -->
+            </div>
+
+            <div id="back-btn"
+              style="display:none; margin-top:40px; cursor:pointer; color:rgba(255,255,255,0.4); font-size:14px;"
+              onclick="showSubMenu('main')">
+              ◀ 처음으로 돌아가기
+            </div> <!-- back-btn end -->
+          </div> <!-- overlay-content end -->
+        </div> <!-- hero-box-wrapper end -->
+      </div> <!-- intro-container end -->
+      <!-- [신규] 하단 스크롤 유도 애니메이션 -->
+      <div class="scroll-indicator" onclick="smoothScroll('sec-about')">
+        <span class="scroll-text">SCROLL DOWN</span>
+        <div class="scroll-mouse">
+          <div class="scroll-wheel"></div>
+        </div>
+      </div>
+    </section>
+
+
+
+    <section id="sec-about" class="page-section">
+      <div class="section-header">
+        <h2 class="section-title">기관소개</h2>
+        <div id="about-nav-target" class="nav-centered-group"></div>
+      </div>
+      <!-- [v27.0] 프로그램과 동일한 풀-컨테이너 슬라이더 구조 -->
+      <div class="about-full-container">
+        <div id="about-us-content">
+          <div class="loading-box">
+            <div class="preloader-spinner"></div>
+            <p>기관소개 정보를 불러오고 있습니다...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- [신규] 3. 공지사항 (독립 섹션 v33.0) -->
+    <section id="sec-notices" class="page-section bg-gray" style="position: relative; overflow: hidden;">
+      <div class="section-wrap" style="max-width: 1220px; padding: 0;">
+        <div class="section-header" style="position: relative; text-align: center; margin-bottom: 20px;">
+          <div style="display: inline-block;">
+            <h2 class="section-title" style="margin-bottom: 0;">공지사항</h2>
+          </div>
+          <!-- [v28.0] 공지사항 카테고리 버튼 타겟 -->
+          <div id="notice-nav-target" class="nav-centered-group" style="margin-top: 10px;"></div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table" id="notice-table">
+            <thead>
+              <tr>
+                <th style="width:60px">번호</th>
+                <th style="width:130px">구분</th>
+                <th style="text-align:center;">제목</th>
+                <th style="width:140px">게시일</th>
+                <th style="width:60px">첨부</th>
+              </tr>
+            </thead>
+            <tbody id="notice-tbody">
+              <tr>
+                <td colspan="5" class="loading-cell">데이터를 불러오는 중...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div> <!-- table-wrap end -->
+
+        <!-- [v28.1] 공지사항 하단 푸터 레이아웃 -->
+        <div class="notice-footer-bar"
+          style="position: relative; margin-top: 20px; min-height: 40px; display: flex; align-items: center; justify-content: center;">
+          <div id="notice-pagination" class="pagination-wrap" style="margin: 0;"></div>
+          <div class="gallery-search-box" style="position: absolute; right: 0; margin-bottom: 0; width: 280px;">
+            <input type="text" id="notice-search-input" class="gallery-search-input-shared"
+              placeholder="공지 제목 또는 내용 검색..." onkeyup="filterNotices()" style="width: 100%;">
+            <span class="search-icon">🔍</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- [신규] 4. 명예의 전당 (독립 섹션 v33.0) -->
+    <section id="sec-hof" class="page-section">
+      <div class="section-wrap" style="max-width: 1320px;">
+        <div class="section-header" style="position: relative; text-align: center; margin-bottom: 20px;">
+          <div style="display: inline-block;">
+            <h2 class="section-title" style="margin-bottom: 0;">명예의 전당</h2>
+          </div>
+          <!-- [v34.17] 카테고리 버튼과 액션 버튼 그룹 분리 -->
+          <div class="hof-controls-group">
+            <!-- 명예의 전당 카테고리 버튼 타겟 (J열 분류 기반) -->
+            <div id="hof-nav-target" class="nav-centered-group"></div>
+
+          </div>
+        </div>
+
+        <!-- 명예의 전당 메인 뷰 영역 -->
+        <div id="hof-main-view" class="hof-full-view">
+          <div class="loading-box">
+            <div class="preloader-spinner"></div>
+            <p>명예의 전당 정보를 불러오고 있습니다...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sec-programs" class="page-section bg-gray">
+      <div class="section-header">
+        <h2 class="section-title">주요 프로그램</h2>
+        <div id="programs-nav-target" class="nav-centered-group"></div>
+      </div>
+      <!-- [수정] 갤러리처럼 가로폭 제한을 해제한 풀-컨테이너 시스템 적용 -->
+      <div class="programs-full-container">
+        <div id="programs-content">
+          <div class="loading-box">
+            <div class="preloader-spinner"></div>
+            <p>프로그램 정보를 불러오고 있습니다...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- [순서변경] 5. 전자소식지 (활동갤러리 앞으로 이동) -->
+    <section id="sec-newsletter" class="page-section bg-gray">
+      <div class="section-wrap">
+        <div class="section-header">
+          <h2 class="section-title">전자소식지</h2>
+        </div>
+
+        <div id="newsletter-grid" class="newsletter-grid">
+          <!-- JS에서 동적으로 채워짐 -->
+        </div>
+      </div>
+    </section>
+
+    <!-- [순서변경] 6. 활동갤러리 (전자소식지 뒤로 이동 — 가변 높이 콘텐츠) -->
+    <section id="sec-gallery" class="page-section">
+      <div class="section-wrap" style="margin-bottom: 20px;">
+        <div class="section-header" style="text-align: center;">
+          <h2 class="section-title">활동갤러리</h2>
+        </div>
+      </div>
+
+      <!-- [v34.3] 카테고리 버튼(중앙) & 검색창(화면 우측 끝단) 배치 -->
+      <div class="gallery-controls-full" style="position: relative; width: 100%; margin-bottom: 40px;">
+        <div id="gallery-nav-target" class="nav-centered-group"
+          style="margin: 0 auto; flex-wrap: nowrap !important; width: fit-content; max-width: 100%;">
+          <!-- 카테고리 버튼 동적 생성 영역 -->
+        </div>
+
+        <div class="gallery-search-container"
+          style="position: absolute; right: 48px; top: 50%; transform: translateY(-50%); margin: 0;">
+          <div class="gallery-search-box" style="position: relative; width: 260px;">
+            <input type="text" id="gallery-search-input" placeholder="행사명 또는 키워드 검색..." onkeyup="filterGallery()">
+            <span class="search-icon">🔍</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- [수정] Grid를 Wrap에서 분리하여 좌우 꽉 채움 -->
+      <div class="gallery-full-container">
+        <div id="gallery-grid" class="gallery-grid">
+          <!-- 갤러리 아이템 렌더링 영역 -->
+          <p style="text-align:center; padding: 60px; color:#888;">사진 데이터를 로드 중입니다...</p>
+        </div>
+      </div>
+
+      <div class="section-wrap">
+        <div id="gallery-more-container" style="text-align: center; margin-top: 40px; display: none;">
+          <button class="btn-more" onclick="loadMorePhotos()">더보기 (+20)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 푸터 -->
+    <footer id="sec-footer" class="footer">
+      <div class="footer-top-bar">
+        <div class="footer-top-inner">
+          <div class="footer-links">
+            <a href="javascript:void(0)" onclick="openFooterModal('privacy')" class="fw-bold"
+              style="font-weight:800; color:#111;">개인정보처리방침</a>
+            <span class="footer-sep">|</span>
+            <a href="javascript:void(0)" onclick="openFooterModal('terms')">이용약관</a>
+            <span class="footer-sep">|</span>
+            <a href="javascript:void(0)" onclick="openFooterModal('no-email')">이메일무단수집거부</a>
+            <span class="footer-sep">|</span>
+            <a href="javascript:void(0)" onclick="openFooterModal('map')">찾아오시는 길</a>
+            <span class="footer-sep">|</span>
+            <a href="#" onclick="window.open('https://sites.google.com/light4u.kr/006/%ED%99%88', '_blank')">등대의집
+              스마트워크</a>
+          </div>
+          <div class="footer-family">
+            <span>관련 링크</span>
+            <select id="agencySelect" class="family-select">
+              <option value="">관련 기관 선택</option>
+            </select>
+            <button class="btn-family-go" onclick="goToAgencyLink()">이동</button>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom-inner" style="display: flex; justify-content: center; text-align: center;">
+        <div class="footer-info-text" style="flex: none; display: inline-block;">
+          <p class="footer-info-p">기관명 : 등대의집 <span class="footer-sep" style="margin:0 8px; color:#555;">|</span> 고유번호 :
+            361-82-00274</p>
+          <p class="footer-info-p">주소 : 충남 천안시 서북구 직산읍 성진로410-11</p>
+          <p class="footer-info-p">전화 : 041-582-4495 <span class="footer-sep" style="margin:0 8px; color:#555;">|</span>
+            팩스 : 041-581-9451 <span class="footer-sep" style="margin:0 8px; color:#555;">|</span> 이메일 :
+            light4495@light4u.kr</p>
+          <p class="footer-copy" style="margin-top: 8px;">Copyright &copy; 2026 등대의집. All rights reserved. Supported by
+            JINHYUN.<span style="color:var(--jh-blue); font-weight:700;">AI</span>.
+            <a href="http://jinhyun.ai.kr" target="_blank"
+              style="text-decoration:none; margin-left:4px; font-size:1.1rem;" title="진현.AI 홈페이지 이동">📧</a>
+          </p>
+        </div>
+      </div>
+    </footer>
+    <!-- [신규 v36.2] 좌측 이동형 아바타 가이드 -->
+    <div id="avatar-guide" class="avatar-guide-container" onclick="toggleChatbot()">
+      <div id="avatar-speech-bubble" class="avatar-speech-bubble">
+        안내를 준비하고 있습니다...
+      </div>
+      <div id="avatar-guide-char" class="avatar-guide-character"></div>
+      <div class="avatar-shadow"></div>
+    </div>
+  </div>
+
+  <!-- 라이트박스 팝업 (갤러리용) — 좌우 화살표 탐색 지원 -->
+  <div id="lightbox-modal" class="lightbox-modal" onclick="closeLightbox()">
+    <div class="lightbox-content" onclick="event.stopPropagation()">
+      <span class="lightbox-close" onclick="closeLightbox()">✕</span>
+
+      <!-- 이전 화살표 -->
+      <button class="lightbox-arrow lightbox-arrow-left" onclick="event.stopPropagation(); prevLightbox()"
+        aria-label="이전 사진">
+        &#8249;
+      </button>
+
+      <img id="lightbox-img" src="" alt="Popup Photo">
+
+      <!-- 다음 화살표 -->
+      <button class="lightbox-arrow lightbox-arrow-right" onclick="event.stopPropagation(); nextLightbox()"
+        aria-label="다음 사진">
+        &#8250;
+      </button>
+
+      <!-- 제목 + 카운터 -->
+      <div class="lightbox-footer">
+        <div id="lightbox-caption" class="lightbox-caption"></div>
+        <div id="lightbox-counter" class="lightbox-counter"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- [신규] 챗봇 플로팅 버튼 -->
+  <div id="chatbot-trigger" class="chatbot-trigger" onclick="toggleChatbot()">
+    <div class="chatbot-glow"></div>
+    <div class="chatbot-ci-icon">
+      <div class="ci-speech-bubble">
+        <div class="ci-speech-dots">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+    <div id="chatbot-bubble" class="chatbot-bubble">자원봉사 문의는 어떠세요?</div>
+    <span class="chatbot-label">AI 비서 가이드</span>
+  </div>
+
+  <!-- [신규] 챗봇 사이드바 -->
+  <div id="chatbot-sidebar" class="chatbot-sidebar">
+    <div class="chatbot-header">
+      <div class="chatbot-header-title">
+        <span class="ci-dot"></span>
+        등대의집 AI 가이드
+      </div>
+      <button class="chatbot-close" onclick="toggleChatbot()">✕</button>
+    </div>
+    <div id="chatbot-messages" class="chatbot-messages">
+      <div class="chat-bubble bot">
+        안녕하세요! 등대의집 홈페이지 방문을 환영합니다. 무엇을 도와드릴까요?
+      </div>
+    </div>
+    <div class="chatbot-input-area">
+      <input type="text" id="chatbot-input" placeholder="질문을 입력하세요..."
+        onkeypress="if(event.keyCode==13) sendChatMessage()">
+      <button onclick="sendChatMessage()">전송</button>
+    </div>
+  </div>
+
+  <!-- [신규] 중앙 팝업 모달 (사이트 공지용 팝업) -->
+  <div id="sitePopupModal" class="modal-backdrop" onclick="checkCloseModal(event, 'sitePopupModal')">
+    <div class="modal-box" style="max-width:500px; padding:0; overflow:hidden;" onclick="event.stopPropagation()">
+      <div
+        style="background:#2563eb; color:#fff; padding:15px 20px; display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0; font-size:18px; color:#ffffff !important;">알림</h3>
+        <button onclick="closeModal('sitePopupModal')"
+          style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">✕</button>
+      </div>
+      <div style="padding:30px 20px; text-align:center;">
+        <h4 style="margin-bottom:15px; color:#333;">등대의집 메타버스 홈페이지 오픈!</h4>
+        <p style="color:#666; line-height:1.6; font-size:14px;">현재 등대의집 메타버스 홈페이지가 새롭게 오픈되었습니다.<br>메타버스 메뉴를 통해 생생한 현장을
+          체험해보세요!</p>
+        <button class="btn-primary" style="margin-top:20px; padding:10px 20px;"
+          onclick="closeModal('sitePopupModal')">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="metaverseEntryModal" class="modal-backdrop" onclick="checkCloseModal(event, 'metaverseEntryModal')">
+    <!-- 닥터 스트레인지 포털 효과용 full-screen Canvas -->
+    <canvas id="portalCanvas"
+      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;"></canvas>
+
+    <div class="metaverse-modal-box" onclick="event.stopPropagation()" style="z-index: 2; position: relative;">
+
+      <!-- 상단 닫기 버튼 -->
+      <button onclick="closeModal('metaverseEntryModal')" class="mv-modal-close-btn">✕</button>
+
+      <!-- 타이틀 영역 -->
+      <p class="mv-modal-eyebrow">등대의집 메타버스 접속</p>
+      <h1 class="mv-modal-logo">DEUNGDAE METAVERSE</h1>
+      <p id="metaverse-modal-subtitle" class="mv-modal-subtitle">방문자 유형을 선택해주세요</p>
+
+      <!-- 메인 선택 (게스트 / 직원) -->
+      <div id="metaverse-modal-main" class="persona-grid" style="justify-content:center;">
+        <button class="persona-btn main-btn" onclick="showMetaverseModalSub('guest')">게스트(Guest)</button>
+        <button class="persona-btn main-btn" onclick="showMetaverseModalSub('staff')">직원(Staff)</button>
+      </div>
+
+      <!-- 게스트 세부 선택 -->
+      <div id="metaverse-modal-guest" class="persona-grid" style="display:none; justify-content:center;">
+        <button class="persona-btn" onclick="closeModal('metaverseEntryModal'); startMetaverse('후원자')">후원자</button>
+        <button class="persona-btn" onclick="closeModal('metaverseEntryModal'); startMetaverse('봉사자')">봉사자</button>
+        <button class="persona-btn" onclick="closeModal('metaverseEntryModal'); startMetaverse('실습생')">실습생</button>
+        <button class="persona-btn" onclick="closeModal('metaverseEntryModal'); startMetaverse('지원자')">지원자</button>
+        <button class="persona-btn" onclick="closeModal('metaverseEntryModal'); startMetaverse('보호자')">보호자 / 일반</button>
+      </div>
+
+      <!-- 뒤로가기 -->
+      <div id="metaverse-modal-back"
+        style="display:none; margin-top:30px; cursor:pointer; color:rgba(255,255,255,0.35); font-size:13px;"
+        onclick="showMetaverseModalSub('main')">
+        ◀ 처음으로 돌아가기
+      </div>
+    </div>
+  </div>
+
+  <!-- [신규] 공지 상세보기 팝업 -->
+  <div id="noticeDetailModal" class="modal-backdrop" onclick="checkCloseModal(event, 'noticeDetailModal')">
+    <div class="modal-box" style="max-width:600px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 id="nDetail-title"></h3>
+        <button class="modal-close" onclick="closeModal('noticeDetailModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p id="nDetail-meta"
+          style="font-size:13px; color:#888; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid #eee;">
+        </p>
+        <p id="nDetail-content" style="font-size:15px; color:#333; line-height:1.9; white-space:pre-wrap;"></p>
+        <div id="nDetail-attachment"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" onclick="closeModal('noticeDetailModal')">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- [신규] 메타버스 전용 채용공고/팝업 (글래스모피즘) -->
+  <div id="metaverseRecruitPopup" class="meta-recruit-overlay" style="display:none;" onclick="closeRecruitPopup()">
+    <div class="meta-recruit-box" onclick="event.stopPropagation()">
+      <div class="meta-recruit-header">
+        <h3 id="meta-recruit-title">입사지원 안내</h3>
+        <button class="meta-recruit-close" onclick="closeRecruitPopup()">✕</button>
+      </div>
+      <div class="meta-recruit-body">
+        <div id="meta-recruit-date" class="meta-recruit-date"></div>
+        <div id="meta-recruit-content" class="meta-recruit-content custom-scrollbar"></div>
+      </div>
+      <div class="meta-recruit-footer">
+        <div id="meta-recruit-attachment"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- [신규] 메타버스 전용 공지사항 전체 목록 (글래스모피즘) -->
+  <div id="metaverseNoticeListPopup" class="meta-recruit-overlay" style="display:none;" onclick="closeMetaNoticeList()">
+    <div class="meta-recruit-box meta-noticelist-box" onclick="event.stopPropagation()">
+      <div class="meta-recruit-header" style="flex-direction: column; align-items: stretch; gap: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h3 id="meta-noticelist-title">공지사항</h3>
+          <button class="meta-recruit-close" onclick="closeMetaNoticeList()">✕</button>
+        </div>
+        <div class="meta-noticelist-search">
+          <input type="text" id="meta-notice-search-input" placeholder="검색어를 입력하세요..."
+            onkeyup="if(event.key==='Enter') searchMetaNotice()">
+          <button onclick="searchMetaNotice()">검색</button>
+        </div>
+      </div>
+      <div class="meta-recruit-body meta-noticelist-body custom-scrollbar" style="padding: 10px 24px;">
+        <ul id="meta-noticelist-content" class="meta-notice-list-ul">
+          <!-- 목록 동적 생성 -->
+        </ul>
+      </div>
+      <div class="meta-recruit-footer" style="text-align: center; justify-content: center; display: flex;">
+        <div id="meta-noticelist-pagination" class="meta-pagination"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- [AI센터] 메타버스 AI 챗봇 글래스모피즘 모달 -->
+  <div id="metaAIChatModal" class="meta-recruit-overlay" style="display:none;" onclick="closeAIChatbot()">
+    <div class="meta-ai-box" onclick="event.stopPropagation()">
+      <!-- 상단 헤더 -->
+      <div class="meta-ai-header">
+        <div class="meta-ai-header-left">
+          <div class="meta-ai-orb"></div>
+          <div>
+            <div class="meta-ai-title">등대의집 AI 어시스턴트</div>
+            <div class="meta-ai-subtitle">🔐 AI센터 전용 채널</div>
+          </div>
+        </div>
+        <button class="meta-recruit-close" onclick="closeAIChatbot()">✕</button>
+      </div>
+
+      <!-- 채팅 메시지 영역 -->
+      <div id="ai-chat-log" class="meta-ai-log custom-scrollbar">
+        <!-- 메시지 동적 생성 -->
+      </div>
+
+      <!-- 입력 영역 -->
+      <div class="meta-ai-input-area">
+        <input type="text" id="ai-chat-input" class="meta-ai-input" placeholder="궁금한 점을 자유롭게 물어보세요..."
+          onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); sendAIChat(); }">
+        <button class="meta-ai-send-btn" onclick="sendAIChat()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+            stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- [신규] 푸터 메뉴 팝업 모달 -->
+  <div id="footerMenuModal" class="modal-backdrop" onclick="checkCloseModal(event, 'footerMenuModal')">
+    <div class="modal-box" style="max-width:800px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3 id="footermodal-title">약관 안내</h3>
+        <button class="modal-close" onclick="closeModal('footerMenuModal')">✕</button>
+      </div>
+      <div id="footermodal-body" class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        <!-- 내용 동적 주입 -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" onclick="closeModal('footerMenuModal')">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 로딩 오버레이 -->
+  <div id="loading-overlay"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:10000; justify-content:center; align-items:center; flex-direction:column; color:white;">
+    <div class="spinner-box" style="text-align:center;">
+      <div class="spinner"
+        style="width:40px; height:40px; border:4px solid rgba(255,255,255,0.3); border-top-color:white; border-radius:50%; animation:spin 1s linear infinite; margin: 20px auto 10px;">
+      </div>
+      <p id="loading-msg">처리 중입니다...</p>
+    </div>
+  </div>
+  <style>
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+
+  <!-- 3. 메인 월드 캔버스 컨테이너 -->
+  <div id="world-container" style="display:none; position:relative;">
+    <div id="hud">
+      <div class="hud-badge"><span id="persona-tag">-</span></div>
+      <div class="hud-badge"><span id="location-name">1F 로비</span></div>
+      <!-- [v8.8] 메뉴 아이콘이나 추가 정보가 들어갈 자리 -->
+    </div>
+
+    <!-- [v9.2] 실시간 공간 안내 카드 -->
+    <div id="zone-card" class="zone-hidden">
+      <div class="zone-header">
+        <span class="zone-icon">📍</span>
+        <span id="zone-title">등대의집</span>
+      </div>
+      <div id="zone-desc">공간에 대한 설명이 여기에 표시됩니다.</div>
+      <div id="zone-action" class="action-hidden">
+        <span class="key-badge">F</span> 키를 눌러 자세히 보기
+      </div>
+    </div>
+
+    <!-- [v12.5] 캔버스 분리: bg-canvas (배경), map-gif-container (오브젝트), meta-canvas (인물/전경) -->
+    <canvas id="bg-canvas" style="position: absolute; top:0; left:0; z-index: 1; pointer-events:none;"></canvas>
+    <!-- [v12.3] 동적 오브젝트(GIF TV 등) 레이어 -->
+    <div id="map-gif-container"
+      style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index: 2;"></div>
+    <canvas id="meta-canvas" style="position: absolute; top:0; left:0; z-index: 3; pointer-events:none;"></canvas>
+
+
+    <!-- [v12.1] 우측 상단 입장 알림 토스트 컨테이너 -->
+    <div id="join-toast-container"></div>
+
+    <!-- [v14.1] 우측 상단 실시간 채팅 로그창 (다목적실 전용) -->
+    <div id="chat-log-window"></div>
+
+    <!-- [v11.6] 하단 중앙 채팅 입력바 -->
+    <form id="chat-form" onsubmit="return false;">
+      <div id="chat-input-wrapper">
+        <span style="font-size: 1.2rem;">💬</span>
+        <textarea id="chat-input" placeholder="대화를 위해 메시지를 입력하세요..." autocomplete="off"></textarea>
+        <div id="chat-input-guide" style="font-size: 0.7rem; color: rgba(255,255,255,0.4);">[Enter] 전송 / [ESC] 취소</div>
+      </div>
+    </form>
+
+    <!-- [v15.0] 모바일 전용 가상 컨트롤러 (터치 기기 전용) -->
+    <div id="mobile-controls">
+      <div id="joystick-zone">
+        <div id="joystick-base">
+          <div id="joystick-stick"></div>
+        </div>
+      </div>
+      <div id="mobile-actions">
+        <div class="mobile-action-grid">
+          <button id="m-btn-s" class="mobile-btn btn-action-s" title="점프 (Space)">S</button>
+          <button id="m-btn-z" class="mobile-btn btn-action-z" title="슈퍼 발사 (Z)">Z</button>
+          <button id="m-btn-x" class="mobile-btn btn-action-x" title="일반 발사 (X)">X</button>
+          <button id="m-btn-f" class="mobile-btn btn-action-f" title="상호작용 (F)">F</button>
+        </div>
+        <button id="m-btn-enter" class="mobile-btn btn-action-enter" title="채팅 열기 (Enter)">💬</button>
+      </div>
+    </div>
+
+    <!-- [신규] 우측 하단 퇴장 버튼 -->
+    <div id="meta-exit-trigger" onclick="openExitModal()" title="메타버스 나가기">
+      <div class="exit-icon-wrap">
+        <span class="exit-icon">🚪</span>
+      </div>
+      <span class="exit-text">EXIT</span>
+    </div>
+
+    <!-- [신규] 퇴장 확인 모달 -->
+    <div id="meta-exit-modal" class="exit-modal-overlay">
+      <div class="exit-modal-content">
+        <div class="exit-modal-glow"></div>
+        <div class="exit-modal-inner">
+          <div class="exit-door-ani">🚪</div>
+          <h3>메타버스 공간에서 나가시겠습니까?</h3>
+          <p>나가기 버튼을 누르면 홈페이지 메인으로 돌아갑니다.</p>
+          <div class="exit-btn-group">
+            <button class="btn-exit-primary" onclick="confirmExit()">네, 나가겠습니다</button>
+            <button class="btn-exit-secondary" onclick="closeExitModal()">아니오, 더 있을게요</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- [수정] 상단 드롭형 메타버스 공지 컨테이너 (중앙 정렬 복원) -->
+  <div id="meta-notice-top-container" style="display:none;"></div>
+
+  <!-- [v35.5] 상단 네비게이션 그룹 (좌측 상단 고정) -->
+  <div id="meta-top-ui-group" style="display:none;">
+    <!-- [신규] 좌측 상단 미니맵 네비게이션 -->
+    <div id="meta-mini-map-wrap">
+      <div id="mini-map-toggle-btn" onclick="toggleMiniMap()">◀</div>
+      <div class="mini-map-header">NAVIGATION</div>
+      <canvas id="mini-map-canvas"></canvas>
+      <div id="mini-map-location-text">Loading...</div>
+    </div>
+  </div>
+
+  <!-- [BGM] 메타버스 배경음악 오디오 엘리먼트 + HUD 제어 버튼 -->
+  <audio id="metaverse-bgm" loop preload="none"></audio>
+  <button id="hud-bgm-btn" class="hud-bgm-btn muted" style="display:none;" onclick="toggleMetaBGM()" title="배경음악 ON/OFF">
+    <span class="hud-bgm-icon">🔇</span>
+  </button>
+  <!-- [발자국] 캐릭터 이동 중 반복 재생되는 발자국 효과음(4초 루프) - 이동 시작 시 재생, 정지 시 즉시 멈춤 -->
+  <audio id="metaverse-footstep" loop preload="none"></audio>
+
+  <!-- [v9.0] 등대 감성 월드 로딩 오버레이 -->
+  <div id="world-loading-overlay" class="overlay-hidden">
+    <div class="loading-box">
+      <img id="loading-gif" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="
+        style="opacity: 0; transition: opacity 0.5s ease;">
+      <p class="loading-msg">잠시만 기다리시면 등대의집 메타버스로 안내합니다</p>
+    </div>
+  </div>
+
+  <!-- [신규] 전역 로딩 오버레이 (저장 중 스피너) -->
+  <div id="global-loader" class="loading-overlay-new">
+    <div class="loader-content">
+      <div class="spinner-new"></div>
+      <p id="loader-text">저장 중입니다...</p>
+    </div>
+  </div>
+
+  <!-- [관리자 인증 모달] -->
+  <div id="admin-auth-modal" class="admin-modal-overlay">
+    <div class="admin-modal-card">
+      <button class="admin-modal-close" onclick="closeAdminAuthModal()">✕</button>
+      <div class="admin-auth-icon">🔒</div>
+      <h3 class="admin-auth-title">관리자 인증</h3>
+      <p class="admin-auth-desc">접속 모니터링 대시보드에 접근하려면 관리자 비밀번호를 입력해주세요.</p>
+
+      <div class="admin-auth-form">
+        <input type="password" id="admin-pw-input" class="admin-pw-input" placeholder="비밀번호 입력"
+          onkeydown="if(event.key==='Enter') submitAdminAuth()">
+        <p id="admin-auth-error" class="admin-auth-error"></p>
+        <div class="admin-auth-btns">
+          <button class="admin-btn-cancel" onclick="closeAdminAuthModal()">취소</button>
+          <button class="admin-btn-confirm" onclick="submitAdminAuth()">확인</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- [관리자 모니터링 대시보드 모달] -->
+  <div id="admin-dashboard-modal" class="admin-dashboard-overlay">
+    <div class="admin-dashboard-window">
+
+      <!-- 대시보드 헤더 -->
+      <div class="admin-dash-header">
+        <div class="admin-dash-title-group">
+          <span class="admin-dash-badge">ADMIN</span>
+          <h2>📊 등대의집 접속 통계 및 모니터링 대시보드</h2>
+        </div>
+        <div class="admin-dash-actions">
+          <button class="admin-dash-refresh-btn" onclick="refreshMonitoringDashboard()" title="새로고침">
+            <span class="refresh-icon">🔄</span> 실시간 새로고침
+          </button>
+          <button class="admin-dash-close-btn" onclick="closeAdminDashboard()" title="닫기">✕</button>
+        </div>
+      </div>
+
+      <!-- 대시보드 본문 -->
+      <div class="admin-dash-body">
+        <!-- 상단 요약 카드 그리드 -->
+        <div class="admin-stat-grid">
+          <div class="admin-stat-card stat-total">
+            <div class="stat-icon">👥</div>
+            <div class="stat-info">
+              <span class="stat-label">총 누적 접속</span>
+              <strong class="stat-value" id="stat-total-val">--</strong>
+            </div>
+          </div>
+          <div class="admin-stat-card stat-today">
+            <div class="stat-icon">⚡</div>
+            <div class="stat-info">
+              <span class="stat-label">오늘 방문자</span>
+              <strong class="stat-value" id="stat-today-val">--</strong>
+            </div>
+          </div>
+          <div class="admin-stat-card stat-metaverse">
+            <div class="stat-icon">🌐</div>
+            <div class="stat-info">
+              <span class="stat-label">메타버스 입장</span>
+              <strong class="stat-value" id="stat-metaverse-val">--</strong>
+            </div>
+          </div>
+          <div class="admin-stat-card stat-devices">
+            <div class="stat-icon">📱</div>
+            <div class="stat-info">
+              <span class="stat-label">기기별 비율</span>
+              <div class="stat-device-pills" id="stat-device-pills">
+                <span class="dev-pill">PC: --</span>
+                <span class="dev-pill">모바일: --</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 필터 탭 및 설명 -->
+        <div class="admin-table-toolbar">
+          <div class="admin-filter-tabs">
+            <button class="admin-tab active" onclick="filterMonitoringLogs('ALL', this)">전체 (<span
+                id="filter-cnt-all">0</span>)</button>
+            <button class="admin-tab" onclick="filterMonitoringLogs('홈페이지', this)">홈페이지 (<span
+                id="filter-cnt-home">0</span>)</button>
+            <button class="admin-tab" onclick="filterMonitoringLogs('메타버스', this)">메타버스 (<span
+                id="filter-cnt-meta">0</span>)</button>
+          </div>
+          <span class="admin-log-note">※ 최근 기록순 최대 200건 표시</span>
+        </div>
+
+        <!-- 로그 테이블 컨테이너 -->
+        <div class="admin-table-container">
+          <div id="admin-table-loading" class="admin-table-loading">
+            <div class="spinner-dash"></div>
+            <p>모니터링 데이터를 안전하게 불러오는 중입니다...</p>
+          </div>
+          <table class="admin-log-table" id="admin-log-table" style="display:none;">
+            <thead>
+              <tr>
+                <th>접속일시</th>
+                <th>접속구분</th>
+                <th>방문자유형</th>
+                <th>계정</th>
+                <th>기기</th>
+                <th>브라우저/OS</th>
+                <th>유입경로</th>
+                <th>체류(초)</th>
+                <th>비고/주요활동</th>
+              </tr>
+            </thead>
+            <tbody id="admin-log-tbody">
+              <!-- JS 동적 생성 -->
+            </tbody>
+          </table>
+          <div id="admin-table-empty" class="admin-table-empty" style="display:none;">
+            <p>기록된 모니터링 로그가 없습니다.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="gas-bridge.js"></script>
+  <script src="app.js"></script>
+<!-- [신규] 좌측 스크롤 네비게이터 (Dots) -->
+  <div id="side-dots-nav" class="side-dots-nav">
+    <div class="dot-item active" onclick="smoothScroll('sec-hero')" title="메인"></div>
+    <div class="dot-item" onclick="smoothScroll('sec-about')" title="기관소개"></div>
+    <div class="dot-item" onclick="smoothScroll('sec-notices')" title="공지사항"></div>
+    <div class="dot-item" onclick="smoothScroll('sec-hof')" title="명예의 전당"></div>
+    <div class="dot-item" onclick="smoothScroll('sec-programs')" title="주요 프로그램"></div>
+    <div class="dot-item" onclick="smoothScroll('sec-newsletter')" title="전자소식지"></div>
+    <div class="dot-item" onclick="smoothScroll('sec-gallery')" title="활동갤러리"></div>
+  </div>
+
+  <!-- [신규] 우측 퀵 메뉴 (POPUP, 메타버스, 후원, 봉사, 앙시트) -->
+  <div id="quick-menu-nav" class="quick-menu-nav">
+
+    <!-- POPUP 배너 (청록 계열로 구분) -->
+    <div class="quick-nav-btn quick-nav-btn-popup" onclick="reopenMainPopup()" title="메인 팝업 보기">
+      <div class="q-icon">🔔<span id="popup-quick-badge" class="q-badge">1</span></div>
+      <div class="q-text">POPUP</div>
+    </div>
+
+    <!-- 메타버스 (녹색 유지) -->
+    <div class="quick-nav-btn" onclick="openMetaverseEntryModal()" title="메타버스 접속">
+      <div class="q-icon">💻</div>
+      <div class="q-text">메타버스</div>
+    </div>
+
+    <!-- 후원신청하기 -->
+    <a href="https://forms.gle/sAk9m29xtWDEkGZk8" target="_blank" class="quick-nav-btn quick-nav-btn-donate"
+      title="후원신청하기">
+      <div class="q-icon">❤️</div>
+      <div class="q-text">후원신청</div>
+    </a>
+
+    <!-- 자원봉사신청하기 -->
+    <a href="https://forms.gle/ft4d94rpiuSqUQvp7" target="_blank" class="quick-nav-btn quick-nav-btn-volunteer"
+      title="자원봉사신청하기">
+      <div class="q-icon">🤝</div>
+      <div class="q-text">봉사신청</div>
+    </a>
+
+    <!-- 앱시트 (직원 전용) -->
+    <a href="https://www.appsheet.com/start/b2a300a6-6de6-478c-8e3c-f59420902480?platform=desktop#appName=SD%EC%97%B0%EA%B5%AC%ED%8C%80v10-866616176&vss=H4sIAAAAAAAAA52OOw7CMBBE7zK1T-AWUSAEDYgGU5h4LVkkdhQ7QGS55wockjuw4SNaoNzZeTOTcXR0WiVdHSC3-XPNaYBEVlgPLSlIhUnwqQu1glBY6uYp3q4XhYKyE280UYTMX5Py704BZ8gnZx11Y8wIMf5C-D0CLLAdRaDpk97X9FjI9lJYs6HqI5kND_itOM789NxqbxbBcJrVdaRyB5eTdq5MAQAA&view=%ED%99%88"
+      target="_blank" class="quick-nav-btn quick-nav-btn-appsheet" title="앱시트 (직원 전용)">
+      <div class="q-icon">🛡️</div>
+      <div class="q-text">AppSheet</div>
+    </a>
+
+    <!-- 워크스페이스 (GNB에서 이동) -->
+    <div class="quick-nav-btn quick-nav-btn-workspace" onclick="openWorkspace()" title="워크스페이스">
+      <div class="q-icon">🖥️</div>
+      <div class="q-text">워크스페이스</div>
+    </div>
+
+  </div>
+
+  <!-- [신규] 상단 이동 버튼 (Top Button) -->
+  <button id="scrollTopBtn" onclick="scrollToTop()" title="맨 위로 이동">↑</button>
+</body>
+
+</html>
