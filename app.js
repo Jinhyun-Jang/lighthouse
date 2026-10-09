@@ -252,6 +252,7 @@
     mapConfigs: {},
     charConfigs: {},
     staffConfigs: {},
+    avatarStaff: null,     // [v36.2] getLandingData에서 사전 로딩된 직원명+이미지
     zoneConfigs: {}, // [v12.2] 층별 영역 이벤트 정보 객체 {'1층': [...], '2층': [...]}
     objectConfigs: {}, // [v12.3] 층별 동적 오브젝트 정보
     activeObjects: [], // [v12.3] 현재 맵에서 활성화된 오브젝트 목록과 위치 데이터
@@ -1615,6 +1616,10 @@
         state.userEmail = data.userEmail;
         state.staffConfigs = data.staffConfigs;
         state.loadingId = data.loadingId;
+        // [v36.2] 아바타 직원+이미지 사전 캐시 저장
+        if (data.avatarStaff && data.avatarStaff.name) {
+          state.avatarStaff = data.avatarStaff;
+        }
 
         // [v34.6] 워크스페이스 링크 동적 할당 (대문 시트 B3 셀 연동)
         if (data.workspaceUrl) {
@@ -6212,54 +6217,71 @@
       });
     }
 
-    // ── 8. 초기화 ─────────────────────────────────────
+    // ── 8. 초기화 ─────────────────────
+    // ── 공통: 아바타 프레임 적용 및 가이드 활성화 ─────────────
+    function activateGuide(guide) {
+      if (!guide || Object.keys(avatarFrames).length === 0) return;
+
+      const firstSec = document.getElementById(GUIDE_SECTIONS[0].id);
+      const wrap = document.getElementById('homepage-wrap');
+      if (firstSec && wrap) {
+        const wrapRect = wrap.getBoundingClientRect();
+        const secRect = firstSec.getBoundingClientRect();
+        guide.style.top = (secRect.top - wrapRect.top + 80) + 'px';
+      } else {
+        guide.style.top = '400px';
+      }
+
+      setAvatarFrame('down', 1);
+      guide.title = `오늘의 가이드: ${selectedStaffName}`;
+      setupSectionObserver();
+
+      // 인사 말풍선 (0.8초 후 — 사전 로딩이므로 빠르게)
+      setTimeout(() => {
+        showBubble(`안녕하세요? 오늘의 가이드 ${selectedStaffName}입니다 😊`);
+        setTimeout(() => {
+          const bubble = document.getElementById('avatar-speech-bubble');
+          if (bubble) bubble.classList.remove('show');
+        }, 7000);
+      }, 800);
+    }
+
     function init() {
       const guide = document.getElementById('avatar-guide');
       if (!guide) return;
 
-      // staffConfigs 준비 대기 (최대 10초)
+      // ── [v36.2] 패스트패스: getLandingData 사전 로딩 데이터 우선 사용 ──
+      if (state.avatarStaff && state.avatarStaff.name && state.avatarStaff.assets &&
+          Object.keys(state.avatarStaff.assets).length > 0) {
+        selectedStaffName = state.avatarStaff.name;
+        selectedFolderId = (state.staffConfigs && state.staffConfigs[selectedStaffName])
+          ? state.staffConfigs[selectedStaffName].folderId : null;
+        const assetKeys = Object.keys(state.avatarStaff.assets);
+        let loaded = 0;
+        assetKeys.forEach(k => {
+          const img = new Image();
+          img.onload = img.onerror = () => {
+            avatarFrames[k] = state.avatarStaff.assets[k];
+            loaded++;
+            if (loaded === assetKeys.length) activateGuide(guide);
+          };
+          img.src = state.avatarStaff.assets[k];
+        });
+        return;
+      }
+
+      // ── 폴백: staffConfigs 폴링 후 GAS 재호출 ──
       let attempts = 0;
       const waitForStaff = setInterval(() => {
         attempts++;
         const ready = state.staffConfigs && Object.keys(state.staffConfigs).length > 0;
         if (ready || attempts > 50) {
           clearInterval(waitForStaff);
-          if (!ready) return; // staffConfigs 없으면 아바타 비활성화
-
+          if (!ready) return;
           if (!pickRandomStaff()) return;
-
           loadAvatarFrames(success => {
             if (!success || Object.keys(avatarFrames).length === 0) return;
-
-            // 초기 위치 (첫 번째 대상 섹션 근처)
-            const firstSec = document.getElementById(GUIDE_SECTIONS[0].id);
-            const wrap = document.getElementById('homepage-wrap');
-            if (firstSec && wrap) {
-              const wrapRect = wrap.getBoundingClientRect();
-              const secRect = firstSec.getBoundingClientRect();
-              guide.style.top = (secRect.top - wrapRect.top + 80) + 'px';
-            } else {
-              guide.style.top = '400px';
-            }
-
-            // 초기 프레임 세팅
-            setAvatarFrame('down', 1);
-
-            // 이름 툴팁 추가
-            guide.title = `오늘의 가이드: ${selectedStaffName}`;
-
-            // 섹션 감지 시작
-            setupSectionObserver();
-
-            // 초기 인사 말풍선 표시 (1.5초 후)
-            setTimeout(() => {
-              showBubble('안녕하세요? 오늘의 가이드 ' + selectedStaffName + '입니다 😊');
-              // 7초 후 말풍선 자동 숨김
-              setTimeout(() => {
-                const bubble = document.getElementById('avatar-speech-bubble');
-                if (bubble) bubble.classList.remove('show');
-              }, 7000);
-            }, 1500);
+            activateGuide(guide);
           });
         }
       }, 200);
