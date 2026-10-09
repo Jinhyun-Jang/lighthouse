@@ -6250,6 +6250,16 @@
 
             // 섹션 감지 시작
             setupSectionObserver();
+
+            // 초기 인사 말풍선 표시 (1.5초 후)
+            setTimeout(() => {
+              showBubble('안녕하세요? 오늘의 가이드 ' + selectedStaffName + '입니다 😊');
+              // 7초 후 말풍선 자동 숨김
+              setTimeout(() => {
+                const bubble = document.getElementById('avatar-speech-bubble');
+                if (bubble) bubble.classList.remove('show');
+              }, 7000);
+            }, 1500);
           });
         }
       }, 200);
