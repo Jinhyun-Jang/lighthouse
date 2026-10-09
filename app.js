@@ -278,7 +278,100 @@
     ]
   };
 
-  /* ════════════════════════════════════════════════════════════
+    /* ════════════════════════════════════════════════════════════
+     [HOMEPAGE BGM MODULE] 홈페이지 배경음악 엔진
+     - 랜딩 진입 시 getLandingData()의 bgmHomepageId를 받아 Base64로 비동기 로드
+     - 브라우저 자동재생(Autoplay) 정책 대응:
+       1) 로드 완료 즉시 play() 시도
+       2) 브라우저 차단 시 사용자 첫 클릭/터치/스크롤 제스처 시 즉시 자동 언락 & 재생
+       3) 좌측 하단 플로팅 버튼으로 수동 ON/OFF 토글 가능
+     - 메타버스 진입 시 홈페이지 BGM 즉시 정지
+  ════════════════════════════════════════════════════════════ */
+  const HOMEPAGE_BGM = {
+    el: null,
+    ready: false,
+    userInteracted: false,
+    init() {
+      if (this.el) return;
+      this.el = document.getElementById('homepage-bgm');
+      if (!this.el) return;
+      this.el.volume = 0.35;
+      this.el.loop = true;
+    },
+    loadFromFileId(fileId) {
+      this.init();
+      if (!this.el || !fileId) return;
+      if (typeof google === 'undefined' || !google.script) return;
+      google.script.run
+        .withSuccessHandler(res => {
+          if (!res || !res.success) {
+            console.warn('[HP_BGM] 음원 로드 실패:', res && res.error);
+            return;
+          }
+          this.el.src = 'data:' + res.mimeType + ';base64,' + res.base64;
+          this.ready = true;
+          const btn = document.getElementById('homepage-bgm-btn');
+          if (btn) btn.style.display = 'flex';
+          this.play();
+        })
+        .withFailureHandler(err => console.warn('[HP_BGM] 음원 요청 실패:', err))
+        .getAudioBase64(fileId);
+    },
+    play() {
+      this.init();
+      if (!this.el || !this.ready) return;
+      this.el.play().then(() => {
+        this.updateIcon();
+      }).catch(err => {
+        // 브라우저 자동재생 차단 시 첫 사용자 제스처 대기
+        this.updateIcon();
+        if (!this.userInteracted) {
+          const unlock = () => {
+            this.userInteracted = true;
+            if (this.el && this.el.paused && this.ready) {
+              this.el.play().then(() => this.updateIcon()).catch(() => {});
+            }
+            ['click', 'touchstart', 'keydown'].forEach(evt => window.removeEventListener(evt, unlock));
+          };
+          ['click', 'touchstart', 'keydown'].forEach(evt => window.addEventListener(evt, unlock, { once: true }));
+        }
+      });
+    },
+    stop() {
+      if (!this.el) return;
+      this.el.pause();
+      this.el.currentTime = 0;
+      this.updateIcon();
+    },
+    pause() {
+      if (!this.el) return;
+      this.el.pause();
+      this.updateIcon();
+    },
+    toggle() {
+      this.init();
+      if (!this.el || !this.ready) return;
+      if (this.el.paused) {
+        this.play();
+      } else {
+        this.pause();
+      }
+    },
+    updateIcon() {
+      const btn = document.getElementById('homepage-bgm-btn');
+      if (!btn) return;
+      const playing = !!(this.el && !this.el.paused);
+      const icon = btn.querySelector('.hp-bgm-icon');
+      btn.classList.toggle('muted', !playing);
+      if (icon) icon.textContent = playing ? '🎵' : '🔇';
+    }
+  };
+
+  function toggleHomepageBGM() {
+    HOMEPAGE_BGM.toggle();
+  }
+
+/* ════════════════════════════════════════════════════════════
      [BGM MODULE] 메타버스 배경음악 엔진
      - 랜딩 로딩과 완전 분리: 메타버스 진입 후 getMetaverseData() 응답으로만 설정 수신
      - 구글 드라이브 uc?export=download 직링크는 HTML 확인페이지를 내려줘 재생 불가 →
@@ -821,6 +914,13 @@
 
       const homepageWrap = document.getElementById('homepage-wrap');
       const wlOverlay = document.getElementById('world-loading-overlay');
+
+      // [BGM] 홈페이지 배경음악 정지 및 버튼 숨김
+      try {
+        HOMEPAGE_BGM.stop();
+        const hpBtn = document.getElementById('homepage-bgm-btn');
+        if (hpBtn) hpBtn.style.display = 'none';
+      } catch (e) { console.warn('[HP_BGM] 정지 실패:', e); }
 
       // 즉시 로딩 화면 표시
       if (wlOverlay) wlOverlay.classList.remove('overlay-hidden');
@@ -1619,6 +1719,13 @@
         // [v34.6] 워크스페이스 링크 동적 할당 (대문 시트 B3 셀 연동)
         if (data.workspaceUrl) {
           window.workspaceUrl = data.workspaceUrl;
+        }
+
+        // [BGM] 홈페이지 배경음악 비동기 로드 시작 (대문 진입 시 자동재생 시도)
+        if (data.bgmHomepageId) {
+          try {
+            HOMEPAGE_BGM.loadFromFileId(data.bgmHomepageId);
+          } catch (e) { console.warn('[HP_BGM] 로드 호출 오류:', e); }
         }
 
         // [모니터링] 홈페이지 초기 방문 로그 기록

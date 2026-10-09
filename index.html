@@ -796,6 +796,9 @@
   </div>
 
   <!-- [BGM] 메타버스 배경음악 오디오 엘리먼트 + HUD 제어 버튼 -->
+  <!-- [BGM] 홈페이지 배경음악 오디오 엘리먼트 -->
+  <audio id="homepage-bgm" loop preload="none"></audio>
+  <!-- [BGM] 메타버스 배경음악 오디오 엘리먼트 + HUD 제어 버튼 -->
   <audio id="metaverse-bgm" loop preload="none"></audio>
   <button id="hud-bgm-btn" class="hud-bgm-btn muted" style="display:none;" onclick="toggleMetaBGM()" title="배경음악 ON/OFF">
     <span class="hud-bgm-icon">🔇</span>
@@ -1005,6 +1008,12 @@
     </div>
 
   </div>
+
+  <!-- [신규] 상단 이동 버튼 (Top Button) -->
+  <!-- [BGM] 홈페이지 배경음악 토글 버튼 (좌측 하단 플로팅) -->
+  <button id="homepage-bgm-btn" class="homepage-bgm-btn muted" onclick="toggleHomepageBGM()" title="배경음악 ON/OFF">
+    <span class="hp-bgm-icon">🔇</span>
+  </button>
 
   <!-- [신규] 상단 이동 버튼 (Top Button) -->
   <button id="scrollTopBtn" onclick="scrollToTop()" title="맨 위로 이동">↑</button>
