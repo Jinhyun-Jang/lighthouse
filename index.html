@@ -1,8 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 
 <head>
-  <meta name="viewport" content="width=1280, user-scalable=yes">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="naver-site-verification" content="0ec9e0800331d6a3714b7c38b155a51d44aad967" />
 
   <meta name="description" content="장애인 거주시설 등대의집 홈페이지입니다. 따뜻한 사랑과 나눔이 있는 곳입니다.">
@@ -19,8 +20,9 @@
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+
   <link rel="stylesheet" href="style.css">
-<script>
+  <script>
     // [보강] 자바스크립트 로딩 전부터 에러 감시 (글로벌 감시용)
     window.onerror = function (msg, url, line) {
       const errLog = document.getElementById('error-log');
@@ -236,6 +238,141 @@
         </div>
       </div>
     </section>
+
+    <!-- [신규] 등대의집 모바일 전용 반응형 슬림 뷰 (PC에서는 숨김, 모바일 전용) -->
+    <div id="mobile-app-view" class="mobile-app-container">
+
+      <!-- 1. 모바일 히어로 & 메타버스 쇼케이스 -->
+      <div class="m-hero-card">
+        <div class="m-hero-badge">사회복지법인 예맥재단 등대의집</div>
+        <h1 class="m-hero-title">어두운 밤바다의 등대처럼,<br><span class="m-neon-text">따뜻한 빛으로 동행합니다</span></h1>
+        <p class="m-hero-desc">중증장애인 거주시설 등대의집 메타버스 포털</p>
+
+        <!-- [핵심] 메타버스 다이렉트 입장 네온 버튼 -->
+        <button class="m-meta-enter-btn" onclick="startMetaverse('게스트')">
+          <div class="m-meta-btn-content">
+            <span class="m-meta-icon">🌐</span>
+            <div class="m-meta-txt">
+              <span class="m-meta-main">3D 메타버스 가상복지관 입장</span>
+              <span class="m-meta-sub">등대의집 가상공간 투어 & 체험</span>
+            </div>
+          </div>
+          <span class="m-meta-arrow">➔</span>
+        </button>
+
+        <!-- 아바타 가이드 환영 말풍선 -->
+        <div class="m-avatar-welcome" id="m-avatar-welcome">
+          <span class="m-avatar-badge">👋 오늘의 가이드</span>
+          <span class="m-avatar-speech-text">안녕하세요! 등대의집 메타버스에 오신 것을 환영합니다 😊</span>
+        </div>
+      </div>
+
+      <!-- 2. 스마트 퀵 탭 (스크롤 지옥 없는 탭 전환 방식) -->
+      <div class="m-tab-bar">
+        <button class="m-tab-btn active" onclick="switchMobileTab('notices', this)">📢 공지사항</button>
+        <button class="m-tab-btn" onclick="switchMobileTab('programs', this)">🏠 주요사업</button>
+        <button class="m-tab-btn" onclick="switchMobileTab('hof', this)">🤝 후원·봉사</button>
+        <button class="m-tab-btn" onclick="switchMobileTab('gallery', this)">📸 갤러리</button>
+      </div>
+
+      <!-- 3. 스마트 탭 컨텐츠 영역 -->
+      <div class="m-tab-content-wrap">
+        <!-- [탭 1: 공지사항] -->
+        <div id="m-tab-notices" class="m-tab-panel active">
+          <div class="m-panel-head">
+            <h3>최신 소식 & 공지</h3>
+            <span class="m-panel-sub">등대의집 새로운 소식</span>
+          </div>
+          <div id="m-notice-list-target" class="m-list-box">
+            <!-- 동적 공지 리스트 로드 -->
+            <div class="m-loading-txt">소식을 불러오는 중입니다...</div>
+          </div>
+        </div>
+
+        <!-- [탭 2: 주요사업] -->
+        <div id="m-tab-programs" class="m-tab-panel">
+          <div class="m-panel-head">
+            <h3>4대 핵심 복지 프로그램</h3>
+            <span class="m-panel-sub">거주인의 존엄과 자립을 위한 맞춤형 서비스</span>
+          </div>
+          <div class="m-program-grid">
+            <div class="m-prog-card">
+              <div class="m-prog-icon">🏠</div>
+              <div class="m-prog-title">일상 및 자립생활</div>
+              <p class="m-prog-desc">개인별 맞춤 일상케어 및 지역사회 자립역량 강화 훈련</p>
+            </div>
+            <div class="m-prog-card">
+              <div class="m-prog-icon">💼</div>
+              <div class="m-prog-title">직업 및 경제활동</div>
+              <p class="m-prog-desc">직업재활 및 근로활동을 통한 사회적·경제적 자립 지원</p>
+            </div>
+            <div class="m-prog-card">
+              <div class="m-prog-icon">🩺</div>
+              <div class="m-prog-title">건강 및 기능회복</div>
+              <p class="m-prog-desc">물리·작업치료 및 전문 건강증진 의료 연계 케어</p>
+            </div>
+            <div class="m-prog-card">
+              <div class="m-prog-icon">🎨</div>
+              <div class="m-prog-title">여가 및 사회통합</div>
+              <p class="m-prog-desc">문화예술 체험, 나들이 및 지역사회 열린 교류 활동</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- [탭 3: 후원 및 봉사 / 명예의 전당] -->
+        <div id="m-tab-hof" class="m-tab-panel">
+          <div class="m-panel-head">
+            <h3>따뜻한 나눔의 빛</h3>
+            <span class="m-panel-sub">등대의집과 함께해 주시는 고마운 분들</span>
+          </div>
+          <div class="m-donation-card">
+            <div class="m-don-badge">후원 계좌 안내</div>
+            <div class="m-don-account">농협 301-0164-3652-31</div>
+            <div class="m-don-holder">(사회복지법인 예맥재단 등대의집)</div>
+            <a href="tel:041-582-4495" class="m-don-tel-btn">📞 후원·봉사 문의: 041-582-4495</a>
+          </div>
+          <div id="m-hof-list-target" class="m-hof-preview">
+            <!-- 명예의 전당 리스트 동적 로드 -->
+          </div>
+        </div>
+
+        <!-- [탭 4: 갤러리] -->
+        <div id="m-tab-gallery" class="m-tab-panel">
+          <div class="m-panel-head">
+            <h3>활동 갤러리</h3>
+            <span class="m-panel-sub">함께 웃고 배우는 행복한 일상</span>
+          </div>
+          <div id="m-gallery-grid-target" class="m-gallery-grid">
+            <!-- 동적 갤러리 로드 -->
+            <div class="m-loading-txt">갤러리를 불러오는 중입니다...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. 하단 모바일 고정 퀵바 (Bottom Bar) -->
+      <nav class="m-bottom-nav">
+        <button class="m-nav-item active" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+          <span class="m-nav-icon">🏠</span>
+          <span class="m-nav-label">홈</span>
+        </button>
+        <button class="m-nav-item m-meta-highlight" onclick="startMetaverse('게스트')">
+          <div class="m-meta-pulse-circle">
+            <span class="m-nav-icon">🌐</span>
+          </div>
+          <span class="m-nav-label">메타버스</span>
+        </button>
+        <button class="m-nav-item" onclick="openChatbotModal()">
+          <span class="m-nav-icon">🤖</span>
+          <span class="m-nav-label">AI 챗봇</span>
+        </button>
+        <a href="tel:041-582-4495" class="m-nav-item">
+          <span class="m-nav-icon">📞</span>
+          <span class="m-nav-label">전화연결</span>
+        </a>
+      </nav>
+
+    </div>
+
 
 
 
@@ -795,7 +932,6 @@
     </div>
   </div>
 
-  <!-- [BGM] 메타버스 배경음악 오디오 엘리먼트 + HUD 제어 버튼 -->
   <!-- [BGM] 홈페이지 배경음악 오디오 엘리먼트 -->
   <audio id="homepage-bgm" loop preload="none"></audio>
   <!-- [BGM] 메타버스 배경음악 오디오 엘리먼트 + HUD 제어 버튼 -->
@@ -947,7 +1083,8 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="gas-bridge.js"></script>
   <script src="app.js"></script>
-<!-- [신규] 좌측 스크롤 네비게이터 (Dots) -->
+
+  <!-- [신규] 좌측 스크롤 네비게이터 (Dots) -->
   <div id="side-dots-nav" class="side-dots-nav">
     <div class="dot-item active" onclick="smoothScroll('sec-hero')" title="메인"></div>
     <div class="dot-item" onclick="smoothScroll('sec-about')" title="기관소개"></div>
@@ -1009,7 +1146,6 @@
 
   </div>
 
-  <!-- [신규] 상단 이동 버튼 (Top Button) -->
   <!-- [BGM] 홈페이지 배경음악 토글 버튼 (좌측 하단 플로팅) -->
   <button id="homepage-bgm-btn" class="homepage-bgm-btn" onclick="toggleHomepageBGM()" title="배경음악 ON/OFF">
     <span class="hp-bgm-icon">🎵</span>

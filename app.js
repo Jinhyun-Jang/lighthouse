@@ -1,4 +1,4 @@
-﻿
+
   /**
    * [22. 등대의집] 메타버스 엔진 v8.4 - 직원 하이패스 & 실명 네임택 버전
    */
@@ -278,7 +278,7 @@
     ]
   };
 
-    /* ════════════════════════════════════════════════════════════
+  /* ════════════════════════════════════════════════════════════
      [HOMEPAGE BGM MODULE] 홈페이지 배경음악 엔진
      - 기본값은 "켜짐(음소거 아님)" 상태이며, 접속 즉시 재생을 시도한다.
      - 재방문: 음원을 브라우저(IndexedDB)에 저장해 두고 서버 응답을 기다리지 않고 즉시 재생
@@ -447,7 +447,7 @@
     HOMEPAGE_BGM.toggle();
   }
 
-/* ════════════════════════════════════════════════════════════
+  /* ════════════════════════════════════════════════════════════
      [BGM MODULE] 메타버스 배경음악 엔진
      - 랜딩 로딩과 완전 분리: 메타버스 진입 후 getMetaverseData() 응답으로만 설정 수신
      - 구글 드라이브 uc?export=download 직링크는 HTML 확인페이지를 내려줘 재생 불가 →
@@ -4456,6 +4456,7 @@
     }
 
     const itemsToDisplay = FILTERED_GALLERY_DATA.slice(0, galleryItemsToShow);
+    try { renderMobileGallery(FILTERED_GALLERY_DATA); } catch (_) {}
     let html = '';
 
     const now = new Date(); // [신규] 시간 비교용 현재 시간
@@ -4863,6 +4864,7 @@
 
     FILTERED_NOTICES_DATA = [...ALL_NOTICES_DATA]; // 초기 필터용 데이터 설정
     displayNoticePage(1);
+    try { renderMobileNotices(sortedData); } catch (_) {}
 
     // [v30.0] 평택대 스타일 이미지 팝업 엔진 실행 (독립 연동)
     initMainNoticePopup();
@@ -6439,7 +6441,7 @@
 
             // 초기 인사 말풍선 표시 (1.5초 후)
             setTimeout(() => {
-              showBubble('안녕하세요? 오늘의 가이드 ' + selectedStaffName + '입니다 😊');
+              showBubble(`안녕하세요? 오늘의 가이드 ${selectedStaffName}입니다 😊`);
               // 7초 후 말풍선 자동 숨김
               setTimeout(() => {
                 const bubble = document.getElementById('avatar-speech-bubble');
@@ -6636,6 +6638,59 @@
         <td style="font-weight:700;text-align:right;">${row.stayDuration ? row.stayDuration + 's' : '-'}</td>
         <td style="color:#334155;">${row.notes || '-'}</td>
       </tr>`;
+    }).join('');
+  }
+
+  // ── [신규] 등대의집 모바일 전용 반응형 뷰 제어 함수 ──
+  function switchMobileTab(tabKey, btnEl) {
+    const buttons = document.querySelectorAll('.m-tab-btn');
+    buttons.forEach(b => b.classList.remove('active'));
+    if (btnEl) btnEl.classList.add('active');
+
+    const panels = document.querySelectorAll('.m-tab-panel');
+    panels.forEach(p => p.classList.remove('active'));
+    const target = document.getElementById('m-tab-' + tabKey);
+    if (target) target.classList.add('active');
+  }
+
+  function renderMobileNotices(data) {
+    const target = document.getElementById('m-notice-list-target');
+    if (!target) return;
+    if (!data || data.length === 0) {
+      target.innerHTML = '<div class="m-loading-txt">등록된 공지사항이 없습니다.</div>';
+      return;
+    }
+    const topItems = data.slice(0, 5);
+    target.innerHTML = topItems.map(item => {
+      const cat = item.category || '공지';
+      const date = item.date ? String(item.date).substring(0, 10) : '';
+      const title = item.title || '제목 없음';
+      const onClick = item.num !== undefined ? `openNoticeDetail(${item.num})` : '';
+      return `<div class="m-notice-item" onclick="${onClick}">
+        <div class="m-notice-top">
+          <span class="m-notice-cat">${cat}</span>
+          <span class="m-notice-date">${date}</span>
+        </div>
+        <div class="m-notice-title">${title}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderMobileGallery(data) {
+    const target = document.getElementById('m-gallery-grid-target');
+    if (!target) return;
+    if (!data || data.length === 0) {
+      target.innerHTML = '<div class="m-loading-txt">등록된 갤러리 사진이 없습니다.</div>';
+      return;
+    }
+    const topItems = data.slice(0, 6);
+    target.innerHTML = topItems.map(item => {
+      const thumb = item.thumbnailUrl || (item.id ? `https://drive.google.com/thumbnail?id=${item.id}&sz=w400` : '');
+      const title = item.name || '';
+      return `<div class="m-gal-card" onclick="openGalleryModal('${item.id || ''}', '${(item.name || '').replace(/'/g, "\\'")}', '${item.date || ''}')">
+        <img class="m-gal-img" src="${thumb}" alt="${title}" loading="lazy" onerror="this.src='https://placehold.co/400x300/1e293b/white?text=등대의집'">
+        <div class="m-gal-title">${title}</div>
+      </div>`;
     }).join('');
   }
 
