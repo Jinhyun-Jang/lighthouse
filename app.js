@@ -279,6 +279,73 @@
   };
 
   /* ════════════════════════════════════════════════════════════
+     [VIEWPORT] 단계별 화면 폭 관리
+     - 부팅(첫 로딩 안내): 기기 폭 → 글자 크게
+     - 홈페이지: PC뷰(1280px)
+     - 메타버스: PC뷰와 폰 기본 사이의 중간 크기 (VIEW_META_SCALE 로 조절)
+  ════════════════════════════════════════════════════════════ */
+  const VIEW_PC_WIDTH = 1280;
+  const VIEW_META_SCALE = 0.6; // 1 = 폰 기본 크기, 0.3 = PC뷰 크기. 클수록 크게 보임
+  const VP = {
+    set(content) {
+      const old = document.getElementById('viewport-meta') || document.querySelector('meta[name="viewport"]');
+      const m = document.createElement('meta');
+      m.name = 'viewport';
+      m.id = 'viewport-meta';
+      m.content = content;
+      if (old && old.parentNode) old.parentNode.replaceChild(m, old);
+      else document.head.appendChild(m);
+    },
+    deviceWidth() {
+      const sw = window.screen.width, sh = window.screen.height;
+      const portrait = window.matchMedia('(orientation: portrait)').matches;
+      return portrait ? Math.min(sw, sh) : Math.max(sw, sh);
+    },
+    isMobile() {
+      return window.matchMedia('(pointer: coarse)').matches && this.deviceWidth() < 1000;
+    },
+    toPC() {
+      document.documentElement.classList.remove('boot-vp');
+      document.documentElement.style.removeProperty('--ui-inv');
+      this.set('width=' + VIEW_PC_WIDTH + ', user-scalable=yes');
+    },
+    toMetaverse() {
+      document.documentElement.classList.remove('boot-vp');
+      if (!this.isMobile()) return;
+      const d = this.deviceWidth();
+      const w = Math.max(d, Math.round(d / VIEW_META_SCALE));
+      const sc = (d / w).toFixed(4);
+      document.documentElement.style.setProperty('--ui-inv', String(w / d));
+      this.set('width=' + w + ', initial-scale=' + sc + ', maximum-scale=' + sc + ', user-scalable=no');
+    }
+  };
+
+  /* ════════════════════════════════════════════════════════════
+     [PREFETCH] 메타버스 입장 속도 개선 — 홈페이지에 머무는 동안 데이터/음원을 미리 받아 둔다
+  ════════════════════════════════════════════════════════════ */
+  const META_PREFETCH = { status: 'idle', data: null, ts: 0, waiters: [] };
+  function requestMetaverseData(onOk, onFail) {
+    const P = META_PREFETCH;
+    if (P.status === 'done' && Date.now() - P.ts < 10 * 60 * 1000) { onOk(P.data); return; }
+    P.waiters.push({ onOk: onOk, onFail: onFail });
+    if (P.status === 'loading') return;
+    P.status = 'loading';
+    google.script.run
+      .withSuccessHandler(d => {
+        P.status = 'done'; P.data = d; P.ts = Date.now();
+        P.waiters.splice(0).forEach(w => w.onOk(d));
+      })
+      .withFailureHandler(e => {
+        P.status = 'idle';
+        P.waiters.splice(0).forEach(w => w.onFail(e));
+      })
+      .getMetaverseData();
+  }
+  function prefetchMetaverseData() {
+    requestMetaverseData(() => { }, () => { });
+  }
+
+  /* ════════════════════════════════════════════════════════════
      [HOMEPAGE BGM MODULE] 홈페이지 배경음악 엔진
      - 기본값은 "켜짐(음소거 아님)" 상태이며, 접속 즉시 재생을 시도한다.
      - 재방문: 음원을 브라우저(IndexedDB)에 저장해 두고 서버 응답을 기다리지 않고 즉시 재생
@@ -337,7 +404,6 @@
     cachePut(id, val) {
       this._db().then(db => {
         const tx = db.transaction('audio', 'readwrite');
-        tx.objectStore('audio').clear();
         tx.objectStore('audio').put(val, id);
       }).catch(() => {});
     },
@@ -447,6 +513,30 @@
     HOMEPAGE_BGM.toggle();
   }
 
+  const AUDIO_PREFETCH = {
+    map: {},
+    pending: {},
+    get(id) { return this.map[id] || null; },
+    fetch(id) {
+      if (!id || this.map[id] || this.pending[id]) return;
+      this.pending[id] = true;
+      HOMEPAGE_BGM.cacheGet(id).then(v => {
+        if (v && v.base64) { this.map[id] = v; return; }
+        google.script.run
+          .withSuccessHandler(res => {
+            if (res && res.success) {
+              const val = { mimeType: res.mimeType, base64: res.base64 };
+              this.map[id] = val;
+              HOMEPAGE_BGM.cachePut(id, val);
+            }
+          })
+          .withFailureHandler(() => { })
+          .getAudioBase64(id);
+      });
+    }
+  };
+
+
   /* ════════════════════════════════════════════════════════════
      [BGM MODULE] 메타버스 배경음악 엔진
      - 랜딩 로딩과 완전 분리: 메타버스 진입 후 getMetaverseData() 응답으로만 설정 수신
@@ -458,6 +548,8 @@
     el: null,
     ready: false,
     worldVisible: false,
+    entering: false,
+    currentId: '',
     init() {
       if (this.el) return;
       this.el = document.getElementById('metaverse-bgm');
@@ -465,21 +557,43 @@
       this.el.volume = 0.35;
       this.el.loop = true;
     },
+    /** 입장 버튼 클릭 직후(로딩 화면 시작 시점) 호출 - 미리 받아 둔 음원이 있으면 즉시 재생 */
+    startEntering() {
+      this.entering = true;
+      const id = (state.bgmMeta && state.bgmMeta.metaverseId) || '';
+      if (id) this.loadFromFileId(id);
+      if (this.ready) this.play();
+    },
     loadFromFileId(fileId) {
       this.init();
       if (!this.el || !fileId) return;
-      google.script.run
-        .withSuccessHandler(res => {
-          if (!res || !res.success) {
-            console.warn('[BGM] 음원 로드 실패:', res && res.error);
-            return;
-          }
-          this.el.src = 'data:' + res.mimeType + ';base64,' + res.base64;
-          this.ready = true;
-          if (this.worldVisible) this.play();
-        })
-        .withFailureHandler(err => console.warn('[BGM] 음원 요청 실패:', err))
-        .getAudioBase64(fileId);
+      if (this.currentId === fileId) {
+        if (this.ready && (this.entering || this.worldVisible)) this.play();
+        return;
+      }
+      this.currentId = fileId;
+      const apply = (mimeType, base64) => {
+        this.el.src = 'data:' + mimeType + ';base64,' + base64;
+        this.ready = true;
+        if (this.entering || this.worldVisible) this.play();
+      };
+      const pre = AUDIO_PREFETCH.get(fileId);
+      if (pre) { apply(pre.mimeType, pre.base64); return; }
+      HOMEPAGE_BGM.cacheGet(fileId).then(v => {
+        if (v && v.base64) { apply(v.mimeType, v.base64); return; }
+        google.script.run
+          .withSuccessHandler(res => {
+            if (!res || !res.success) {
+              console.warn('[BGM] 음원 로드 실패:', res && res.error);
+              this.currentId = '';
+              return;
+            }
+            HOMEPAGE_BGM.cachePut(fileId, { mimeType: res.mimeType, base64: res.base64 });
+            apply(res.mimeType, res.base64);
+          })
+          .withFailureHandler(err => { console.warn('[BGM] 음원 요청 실패:', err); this.currentId = ''; })
+          .getAudioBase64(fileId);
+      });
     },
     play() {
       this.init();
@@ -494,6 +608,7 @@
       this.el.pause();
       this.el.currentTime = 0;
       this.worldVisible = false;
+      this.entering = false;
       this.updateIcon();
     },
     toggle() {
@@ -540,6 +655,9 @@
     loadFromFileId(fileId) {
       this.init();
       if (!this.el || !fileId) return;
+      if (this.ready) return;
+      const pre = AUDIO_PREFETCH.get(fileId);
+      if (pre) { this.el.src = 'data:' + pre.mimeType + ';base64,' + pre.base64; this.ready = true; return; }
       google.script.run
         .withSuccessHandler(res => {
           if (!res || !res.success) { console.warn('[발자국] 음원 로드 실패:', res && res.error); return; }
@@ -971,7 +1089,50 @@
       state.avatar.isGhost = false;
     }
 
-    // Firebase 초기화 (실패해도 계속 진행)
+    // [속도] 입장 클릭 즉시: 뷰포트 전환 + 로딩 화면 + 메타버스 BGM 시작 → Firebase 확인과 데이터 로드는 동시에 진행
+    document.body.classList.add('metaverse-active');
+    VP.toMetaverse();
+
+    // [수정] 메타버스 진입 팝업 공지 호출 (안정성을 위해 100ms 지연 호출)
+    if (!state.noticeChecked) {
+      state.noticeChecked = true;
+      setTimeout(checkMetaverseNotice, 100);
+    }
+
+    const homepageWrap = document.getElementById('homepage-wrap');
+    const wlOverlay = document.getElementById('world-loading-overlay');
+
+    // [BGM] 홈페이지 배경음악 정지 및 버튼 숨김
+    try {
+      HOMEPAGE_BGM.stop();
+      const hpBtn = document.getElementById('homepage-bgm-btn');
+      if (hpBtn) hpBtn.style.display = 'none';
+    } catch (e) { console.warn('[HP_BGM] 정지 실패:', e); }
+
+    // [BGM] 로딩 화면부터 메타버스 BGM 재생 (입장 클릭이 사용자 제스처)
+    try { BGM.startEntering(); } catch (e) { console.warn('[BGM] 로딩 화면 재생 시작 실패:', e); }
+
+    // 즉시 로딩 화면 표시
+    if (wlOverlay) wlOverlay.classList.remove('overlay-hidden');
+
+    if (homepageWrap) {
+      homepageWrap.style.transition = 'opacity 0.8s ease';
+      homepageWrap.style.opacity = '0';
+      homepageWrap.style.pointerEvents = 'none';
+      setTimeout(() => {
+        homepageWrap.style.display = 'none';
+        const chatbotBtn = document.getElementById('chatbot-trigger');
+        const chatbotSidebar = document.getElementById('chatbot-sidebar');
+        if (chatbotBtn) chatbotBtn.style.display = 'none';
+        if (chatbotSidebar) chatbotSidebar.classList.remove('open');
+      }, 800);
+    }
+
+    // 메타버스 데이터 로드 (홈페이지에서 미리 받아 둔 것이 있으면 즉시 사용)
+    const metaPromise = new Promise((resolve, reject) => requestMetaverseData(resolve, reject));
+
+    // Firebase 연결/세션 정리 (실패해도 입장은 계속) - 데이터 로드와 동시에 진행
+    let fbReady;
     try {
       if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
       db = firebase.database();
@@ -980,106 +1141,65 @@
       db = null;
     }
 
-    // Firebase DB 세션 정리 (연결 실패 시 건너뜀)
-    const proceedToLoad = () => {
-    // [모바일 최적화] 메타버스 진입 시 뷰포트를 device-width로 전환
-      document.body.classList.add('metaverse-active');
-      const vp = document.getElementById('viewport-meta') || document.querySelector('meta[name="viewport"]');
-      if (vp) vp.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
-
-      // [수정] 메타버스 진입 팝업 공지 호출 (안정성을 위해 100ms 지연 호출)
-      if (!state.noticeChecked) {
-        state.noticeChecked = true;
-        setTimeout(checkMetaverseNotice, 100);
-      }
-
-      const homepageWrap = document.getElementById('homepage-wrap');
-      const wlOverlay = document.getElementById('world-loading-overlay');
-
-      // [BGM] 홈페이지 배경음악 정지 및 버튼 숨김
-      try {
-        HOMEPAGE_BGM.stop();
-        const hpBtn = document.getElementById('homepage-bgm-btn');
-        if (hpBtn) hpBtn.style.display = 'none';
-      } catch (e) { console.warn('[HP_BGM] 정지 실패:', e); }
-
-      // 즉시 로딩 화면 표시
-      if (wlOverlay) wlOverlay.classList.remove('overlay-hidden');
-
-      if (homepageWrap) {
-        homepageWrap.style.transition = 'opacity 0.8s ease';
-        homepageWrap.style.opacity = '0';
-        homepageWrap.style.pointerEvents = 'none';
-        setTimeout(() => {
-          homepageWrap.style.display = 'none';
-          const chatbotBtn = document.getElementById('chatbot-trigger');
-          const chatbotSidebar = document.getElementById('chatbot-sidebar');
-          if (chatbotBtn) chatbotBtn.style.display = 'none';
-          if (chatbotSidebar) chatbotSidebar.classList.remove('open');
-        }, 800);
-      }
-
-      // 메타버스 데이터 로드
-      google.script.run
-        .withSuccessHandler(metaData => {
-          state.mapConfigs = metaData.mapConfigs;
-          state.zoneConfigs = metaData.zoneConfigs;
-          state.charConfigs = metaData.charConfigs;
-          state.objectConfigs = metaData.objectConfigs;
-          state.loadingId = metaData.loadingId;
-          state.aiBotConfig = metaData.aiBotConfig; // [신규] AIbot 탭 캐릭터 폴더 ID
-          state.fountainConfig = metaData.fountainConfig || null; // [분수대] 폴더 ID
-          state.cinemaConfig = metaData.cinemaConfig || null; // [시네마] 극장 조명 폴더 ID
-          // [BGM] 메타버스 전용 배경음악 백그라운드 로드 시작 (재생은 world-loading 종료 시점에)
-          try {
-            const bgmFileId = metaData.bgmConfigs && metaData.bgmConfigs.metaverseId;
-            if (bgmFileId) BGM.loadFromFileId(bgmFileId);
-            const footstepCfg = metaData.bgmConfigs && metaData.bgmConfigs.all &&
-              metaData.bgmConfigs.all.find(x => x.category === '발자국소리');
-            if (footstepCfg && footstepCfg.fileId) FOOTSTEP.loadFromFileId(footstepCfg.fileId);
-          } catch (e) { console.warn('[BGM] 설정 준비 실패:', e); }
-          showWorldLoading();
-        })
-        .withFailureHandler(err => {
-          console.error('메타버스 데이터 로드 실패:', err);
-          if (wlOverlay) wlOverlay.classList.add('overlay-hidden');
-          if (homepageWrap) {
-            homepageWrap.style.display = 'block';
-            setTimeout(() => { homepageWrap.style.opacity = '1'; homepageWrap.style.pointerEvents = 'auto'; }, 50);
-          }
-          alert('메타버스 데이터를 불러오지 못했습니다.\n새로고침 후 다시 시도해주세요.');
-        })
-        .getMetaverseData();
-    };
-
     if (db) {
-      // Firebase 연결 성공 시: 세션 정리 후 진행
-      firebase.auth().signInAnonymously()
+      fbReady = firebase.auth().signInAnonymously()
         .then(() => db.ref('players').once('value'))
         .then(snap => {
-        const players = snap.val() || {};
-        const now = Date.now();
-        if (isStaff) {
-          const isDuplicate = Object.values(players).some(p =>
-            p.name === selectedPersona && (now - (p.lastUpdate || 0) < 15000)
-          );
-          if (isDuplicate) {
-            alert(`🛑 이미 [${selectedPersona}]님으로 접속 중인 '활성' 세션이 존재합니다.\n직원 계정은 중복 접속이 불가능합니다.`);
-            return;
+          const players = snap.val() || {};
+          const now = Date.now();
+          if (isStaff) {
+            const isDuplicate = Object.values(players).some(p =>
+              p.name === selectedPersona && (now - (p.lastUpdate || 0) < 15000)
+            );
+            if (isDuplicate) {
+              alert(`🛑 이미 [${selectedPersona}]님으로 접속 중인 '활성' 세션이 존재합니다.\n직원 계정은 중복 접속이 불가능합니다.`);
+              return false;
+            }
+            Object.keys(players).forEach(id => {
+              if (players[id].name === selectedPersona) db.ref('players/' + id).remove();
+            });
           }
-          Object.keys(players).forEach(id => {
-            if (players[id].name === selectedPersona) db.ref('players/' + id).remove();
-          });
-        }
-        proceedToLoad();
-      }).catch(err => {
-        console.warn('Firebase 세션 체크 실패 — 솔로모드 진행:', err);
-        proceedToLoad(); // Firebase 실패해도 입장은 계속
-      });
+          return true;
+        })
+        .catch(err => {
+          console.warn('Firebase 세션 체크 실패 — 솔로모드 진행:', err);
+          return true; // Firebase 실패해도 입장은 계속
+        });
     } else {
-      // Firebase 없이 바로 진행 (솔로모드)
-      proceedToLoad();
+      fbReady = Promise.resolve(true);
     }
+
+    Promise.all([fbReady, metaPromise]).then(([ok, metaData]) => {
+      if (!ok) { location.reload(); return; }
+      state.mapConfigs = metaData.mapConfigs;
+      state.zoneConfigs = metaData.zoneConfigs;
+      state.charConfigs = metaData.charConfigs;
+      state.objectConfigs = metaData.objectConfigs;
+      state.loadingId = metaData.loadingId;
+      state.aiBotConfig = metaData.aiBotConfig; // [신규] AIbot 탭 캐릭터 폴더 ID
+      state.fountainConfig = metaData.fountainConfig || null; // [분수대] 폴더 ID
+      state.cinemaConfig = metaData.cinemaConfig || null; // [시네마] 극장 조명 폴더 ID
+      // [BGM] 메타버스 전용 배경음악/발자국 음원 (이미 준비된 경우 중복 로드하지 않음)
+      try {
+        const bgmFileId = metaData.bgmConfigs && metaData.bgmConfigs.metaverseId;
+        if (bgmFileId) BGM.loadFromFileId(bgmFileId);
+        const footstepCfg = metaData.bgmConfigs && metaData.bgmConfigs.all &&
+          metaData.bgmConfigs.all.find(x => x.category === '발자국소리');
+        if (footstepCfg && footstepCfg.fileId) FOOTSTEP.loadFromFileId(footstepCfg.fileId);
+      } catch (e) { console.warn('[BGM] 설정 준비 실패:', e); }
+      showWorldLoading();
+    }, err => {
+      console.error('메타버스 데이터 로드 실패:', err);
+      try { BGM.stop(); } catch (e) { }
+      document.body.classList.remove('metaverse-active');
+      VP.toPC();
+      if (wlOverlay) wlOverlay.classList.add('overlay-hidden');
+      if (homepageWrap) {
+        homepageWrap.style.display = 'block';
+        setTimeout(() => { homepageWrap.style.opacity = '1'; homepageWrap.style.pointerEvents = 'auto'; }, 50);
+      }
+      alert('메타버스 데이터를 불러오지 못했습니다.\n새로고침 후 다시 시도해주세요.');
+    });
   }
 
   // [v23.2] 메타버스 진입 속도 필살 최적화: 맵 분석은 필요한 경우에만 최소화 수행
@@ -1140,6 +1260,13 @@
         .getMapImageBase64(id);
     });
 
+    // [속도] 서버 Base64 맵 이미지는 비주얼/아바타 로딩과 동시에 내려받기 시작
+    const pColl = loadMapImg(cfg.collisionId);
+    const pFore = loadMapImg(cfg.foregroundId);
+    const pColor = loadMapImg(cfg.colorMapId);
+    const pObj = loadMapImg(cfg.objectMapId);
+    const pAi = loadMapImg(cfg.aiPathMapId);
+
     loadVisual().then(img => {
       if (!img) return;
       return loadSingleAvatar(state.avatar.personality).then(() => img);
@@ -1147,11 +1274,11 @@
       if (!img) return;
       // 충돌/가림은 필수, 컬러/오브젝트는 실패해도 진행
       return Promise.all([
-        loadMapImg(cfg.collisionId).then(cImg => { if (cImg) analyzeCollisions(cImg, img.width, img.height); }),
-        loadMapImg(cfg.foregroundId).then(fImg => { if (fImg) analyzeForeground(fImg, img.width, img.height); }),
-        loadMapImg(cfg.colorMapId).then(cMapImg => { if (cMapImg) analyzeColorMap(cMapImg, img.width, img.height); }),
-        loadMapImg(cfg.objectMapId).then(oImg => { if (oImg) analyzeObjectMap(oImg, img.width, img.height); }),
-        loadMapImg(cfg.aiPathMapId).then(aImg => { if (aImg) analyzeAIPathMap(aImg, img.width, img.height); }),
+        pColl.then(cImg => { if (cImg) analyzeCollisions(cImg, img.width, img.height); }),
+        pFore.then(fImg => { if (fImg) analyzeForeground(fImg, img.width, img.height); }),
+        pColor.then(cMapImg => { if (cMapImg) analyzeColorMap(cMapImg, img.width, img.height); }),
+        pObj.then(oImg => { if (oImg) analyzeObjectMap(oImg, img.width, img.height); }),
+        pAi.then(aImg => { if (aImg) analyzeAIPathMap(aImg, img.width, img.height); }),
         loadAIBotAvatar(),
         loadFountainImages(),
         loadCinemaImages()
@@ -1823,6 +1950,18 @@
           } catch (e) { console.warn('[HP_BGM] 로드 호출 오류:', e); }
         }
 
+        // [속도] 메타버스 입장 대비 백그라운드 사전 로딩 (홈페이지 BGM 다음 순서)
+        state.bgmMeta = { metaverseId: data.bgmMetaverseId || '', footstepId: data.bgmFootstepId || '' };
+        setTimeout(() => {
+          try {
+            prefetchMetaverseData();
+            setTimeout(() => {
+              AUDIO_PREFETCH.fetch(state.bgmMeta.footstepId);
+              AUDIO_PREFETCH.fetch(state.bgmMeta.metaverseId);
+            }, 1500);
+          } catch (e) { console.warn('[PREFETCH] 오류:', e); }
+        }, 4000);
+
         // [모니터링] 홈페이지 초기 방문 로그 기록
         try {
           Monitoring.logHomepageAccess();
@@ -1902,7 +2041,12 @@
 
   function hidePreloader() {
     const p = document.getElementById('preloader');
-    if (p) p.classList.add('preloader-hidden');
+    if (!p) { VP.toPC(); return; }
+    p.classList.add('preloader-leaving');
+    setTimeout(() => {
+      VP.toPC(); // 첫 로딩 안내(기기 폭) 종료 → 홈페이지는 PC뷰
+      p.classList.add('preloader-hidden');
+    }, 180);
   }
 
   // ─── 이하 게임 엔진 함수 ───────────────────────────────
