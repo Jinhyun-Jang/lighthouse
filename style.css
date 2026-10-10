@@ -1,4 +1,4 @@
-﻿
+
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500&family=Noto+Sans+KR:wght@300;500;700&family=Nanum+Pen+Script&display=swap');
 
   /* [v9.1] 블랙 & 화이트 초기 프리로더 */
@@ -80,7 +80,12 @@
     overflow-x: hidden;
     margin: 0;
     padding: 0;
-    min-width: 1280px;
+  }
+
+  @media (min-width: 1025px) {
+    body {
+      min-width: 1280px;
+    }
   }
 
   /* [v10.0] 메타버스 컨테이너 풀스크린 고정 */
@@ -5308,8 +5313,6 @@
     }
   }
 
-  
-
   /* [BGM] 홈페이지 배경음악 토글 버튼 (좌측 하단 플로팅) */
   #homepage-bgm-btn {
     position: fixed;
@@ -5394,7 +5397,7 @@
     }
   }
 
-/* [v35.5] 헤더 디지털 시계 — 심플 텍스트 스타일 */
+  /* [v35.5] 헤더 디지털 시계 — 심플 텍스트 스타일 */
   .header-clock {
     margin-left: 18px;
     padding-left: 18px;
@@ -6384,9 +6387,7 @@
     background-color: #7c3aed !important;
     color: #ffffff !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
-    /* 아래에 하나 더 있으므로 구분선 유지 */
     border-radius: 0 !important;
-    /* 마지막이 아니므로 radius 제거 */
   }
 
   .quick-nav-btn-appsheet:hover {
@@ -6398,17 +6399,19 @@
     color: #ffffff !important;
   }
 
-  /* 디지털도서관 버튼 - 틸/에메랄드 */
+  /* 디지털도서관 버튼 - 지적이고 세련된 인디고/에메랄드 톤 */
   .quick-nav-btn-library {
-    background-color: #0f766e !important;
+    background-color: #0f766e !important; /* teal-700 */
     color: #ffffff !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
     border-radius: 0 !important;
   }
+
   .quick-nav-btn-library:hover {
-    background-color: #115e59 !important;
+    background-color: #115e59 !important; /* teal-800 */
     transform: scale(1.05);
   }
+
   .quick-nav-btn-library .q-text {
     color: #ffffff !important;
   }
@@ -7540,5 +7543,579 @@
 
     .admin-dash-body {
       padding: 16px;
+    }
+  }
+  /* ==========================================================================
+     [국장님 맞춤형] 등대의집 모바일 전용 반응형 레이아웃 시스템 (1024px 이하)
+     ========================================================================== */
+  @media (max-width: 1024px) {
+    /* 1. 상단 GNB & 햄버거 메뉴 */
+    #gnb {
+      height: 60px !important;
+      padding: 0 16px !important;
+    }
+
+    .gnb-inner {
+      height: 100% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    .gnb-logo img {
+      width: 32px !important;
+      height: 32px !important;
+    }
+
+    .brand-text {
+      font-size: 17px !important;
+      font-weight: 800 !important;
+    }
+
+    /* 날씨 위젯 모바일 슬림화 */
+    #header-weather {
+      margin-left: 8px !important;
+      padding: 3px 8px !important;
+      font-size: 11px !important;
+    }
+
+    .header-clock {
+      display: none !important;
+    }
+
+    /* 햄버거 메뉴 아이콘 표시 */
+    .hamburger {
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      width: 24px !important;
+      height: 18px !important;
+      cursor: pointer !important;
+      z-index: 99999 !important;
+    }
+
+    .hamburger span {
+      display: block !important;
+      width: 100% !important;
+      height: 2px !important;
+      background: #ffffff !important;
+      border-radius: 2px !important;
+      transition: all 0.3s ease !important;
+    }
+
+    /* 햄버거 모바일 드로어 메뉴 스타일링 */
+    .gnb-nav {
+      position: fixed !important;
+      top: 0 !important;
+      right: -300px !important;
+      width: 280px !important;
+      height: 100vh !important;
+      background: rgba(10, 15, 30, 0.98) !important;
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+      border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      padding: 80px 24px 40px !important;
+      box-sizing: border-box !important;
+      z-index: 99990 !important;
+      transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+      overflow-y: auto !important;
+    }
+
+    .gnb-nav.open {
+      right: 0 !important;
+      box-shadow: -10px 0 30px rgba(0, 0, 0, 0.6) !important;
+    }
+
+    .gnb-list {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 12px !important;
+      width: 100% !important;
+    }
+
+    .gnb-item {
+      width: 100% !important;
+    }
+
+    .gnb-link {
+      width: 100% !important;
+      font-size: 16px !important;
+      font-weight: 700 !important;
+      color: #f1f5f9 !important;
+      padding: 12px 14px !important;
+      border-radius: 12px !important;
+      background: rgba(255, 255, 255, 0.04) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      border: 1px solid rgba(255, 255, 255, 0.06) !important;
+      text-align: left !important;
+    }
+
+    .gnb-link:active {
+      background: rgba(37, 99, 235, 0.25) !important;
+      color: #60a5fa !important;
+    }
+
+    .gnb-sub-wrap,
+    .gnb-megamenu-panel {
+      display: none !important;
+    }
+
+    /* 2. 첫 화면 (배경화면 & 메타버스 인트로 박스) */
+    #sec-hero {
+      height: 100vh !important;
+      min-height: 100vh !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      position: relative !important;
+      overflow: hidden !important;
+    }
+
+    #landing-bg {
+      height: 100vh !important;
+      width: 100% !important;
+      background-size: cover !important;
+      background-position: center !important;
+    }
+
+    .hero-box-wrapper {
+      width: calc(100% - 32px) !important;
+      max-width: 370px !important;
+      padding: 24px 20px !important;
+      border-radius: 24px !important;
+      background: rgba(10, 15, 30, 0.85) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      border: 1px solid rgba(56, 189, 248, 0.3) !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
+      box-sizing: border-box !important;
+    }
+
+    .overlay-content {
+      padding: 0 !important;
+      text-align: center !important;
+    }
+
+    .welcome-text {
+      font-size: 13px !important;
+      color: #94a3b8 !important;
+      margin-bottom: 4px !important;
+    }
+
+    .jh-logo {
+      font-size: 24px !important;
+      letter-spacing: -0.5px !important;
+      margin-bottom: 8px !important;
+      line-height: 1.3 !important;
+      color: #ffffff !important;
+      text-shadow: 0 0 16px rgba(56, 189, 248, 0.5) !important;
+    }
+
+    .subtitle {
+      font-size: 12px !important;
+      color: rgba(255, 255, 255, 0.75) !important;
+      margin-bottom: 22px !important;
+      line-height: 1.4 !important;
+    }
+
+    .persona-grid {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 10px !important;
+      margin: 0 !important;
+    }
+
+    .persona-btn {
+      padding: 13px 8px !important;
+      font-size: 14px !important;
+      font-weight: 700 !important;
+      border-radius: 14px !important;
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.8), rgba(29, 78, 216, 0.9)) !important;
+      border: 1px solid rgba(96, 165, 250, 0.5) !important;
+      color: #ffffff !important;
+      cursor: pointer !important;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
+      transition: transform 0.15s ease !important;
+    }
+
+    .persona-btn:active {
+      transform: scale(0.94) !important;
+      filter: brightness(0.9) !important;
+    }
+
+    .persona-btn.main-btn {
+      padding: 15px 10px !important;
+      font-size: 15px !important;
+    }
+
+    /* [국장님 지침] 좌측 아바타 캐릭터 숨김 */
+    #avatar-guide,
+    #avatar-bubble,
+    .avatar-guide-container,
+    #guide-avatar-container {
+      display: none !important;
+    }
+
+    /* PC 전용 네비게이션 인디케이터 숨김 */
+    #side-dots-nav,
+    .scroll-indicator {
+      display: none !important;
+    }
+
+    /* 3. 본문 섹션 최적화 */
+    .page-section {
+      padding: 40px 16px !important;
+      box-sizing: border-box !important;
+      max-width: 100% !important;
+    }
+
+    .section-title {
+      font-size: 24px !important;
+      margin-bottom: 12px !important;
+    }
+
+    /* [국장님 지침] 명예의 전당 모바일에서 숨김 */
+    #sec-hof {
+      display: none !important;
+    }
+
+    /* 4. 공지사항 모바일 텍스트 카드 최적화 */
+    #sec-notices .table-wrap {
+      overflow: visible !important;
+      border: none !important;
+      background: transparent !important;
+    }
+
+    #notice-table {
+      width: 100% !important;
+      border-collapse: separate !important;
+      border-spacing: 0 10px !important;
+    }
+
+    #notice-table thead {
+      display: none !important; /* 모바일 헤더 숨김 */
+    }
+
+    #notice-table tbody tr {
+      display: flex !important;
+      flex-direction: column !important;
+      padding: 14px 16px !important;
+      background: rgba(15, 23, 42, 0.75) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-radius: 14px !important;
+      margin-bottom: 10px !important;
+      cursor: pointer !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+      transition: transform 0.15s ease, background 0.15s ease !important;
+    }
+
+    #notice-table tbody tr:active {
+      transform: scale(0.98) !important;
+      background: rgba(30, 41, 59, 0.9) !important;
+    }
+
+    /* 번호(1열), 첨부(5열) 숨김 */
+    #notice-table tbody td:nth-child(1),
+    #notice-table tbody td:nth-child(5) {
+      display: none !important;
+    }
+
+    /* 구분(2열)과 게시일(4열) 상단 한 줄 배치 */
+    #notice-table tbody td:nth-child(2) {
+      display: inline-block !important;
+      padding: 2px 8px !important;
+      font-size: 11px !important;
+      font-weight: 700 !important;
+      color: #60a5fa !important;
+      background: rgba(37, 99, 235, 0.2) !important;
+      border-radius: 6px !important;
+      width: fit-content !important;
+      margin-bottom: 6px !important;
+    }
+
+    /* 제목(3열) 큼직하게 노출 */
+    #notice-table tbody td:nth-child(3) {
+      display: block !important;
+      padding: 0 !important;
+      font-size: 15px !important;
+      font-weight: 600 !important;
+      color: #f1f5f9 !important;
+      line-height: 1.4 !important;
+      text-align: left !important;
+      margin-bottom: 6px !important;
+    }
+
+    /* 게시일(4열) 하단 작은 글씨 */
+    #notice-table tbody td:nth-child(4) {
+      display: block !important;
+      padding: 0 !important;
+      font-size: 11px !important;
+      color: #64748b !important;
+      text-align: left !important;
+    }
+
+    /* 카테고리 네비게이션 가로 스크롤 */
+    #notice-nav-target {
+      display: flex !important;
+      overflow-x: auto !important;
+      gap: 6px !important;
+      padding: 4px 0 !important;
+      scrollbar-width: none !important;
+    }
+
+    #notice-nav-target::-webkit-scrollbar {
+      display: none !important;
+    }
+
+    .notice-footer-bar {
+      flex-direction: column !important;
+      gap: 14px !important;
+    }
+
+    .gallery-search-box {
+      width: 100% !important;
+      position: static !important;
+    }
+
+    /* 5. 활동갤러리 모바일 2열 카드 그리드 최적화 (인스타그램 방식 대체) */
+    .gallery-full-container {
+      padding: 0 16px !important;
+    }
+
+    .gallery-grid {
+      display: grid !important;
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 12px !important;
+      width: 100% !important;
+    }
+
+    .gallery-card {
+      border-radius: 14px !important;
+      overflow: hidden !important;
+      background: #0f172a !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+      cursor: pointer !important;
+      transition: transform 0.15s ease !important;
+    }
+
+    .gallery-card:active {
+      transform: scale(0.96) !important;
+    }
+
+    .gallery-card-img-wrap {
+      aspect-ratio: 4 / 3 !important;
+      width: 100% !important;
+      overflow: hidden !important;
+    }
+
+    .gallery-card-img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+    }
+
+    .gallery-card-info {
+      padding: 10px 10px !important;
+    }
+
+    .gallery-card-title {
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      color: #f1f5f9 !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+
+    .gallery-card-date {
+      font-size: 10px !important;
+      color: #64748b !important;
+      margin-top: 2px !important;
+    }
+
+    /* 6. 하단 가로 고정 퀵 메뉴바 (버튼 5종 + 눌림 느낌 피드백) */
+    #quick-menu-nav {
+      position: fixed !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      top: auto !important;
+      transform: none !important;
+      width: 100% !important;
+      height: 62px !important;
+      display: flex !important;
+      flex-direction: row !important;
+      justify-content: space-around !important;
+      align-items: center !important;
+      background: rgba(15, 23, 42, 0.96) !important;
+      backdrop-filter: blur(18px) !important;
+      -webkit-backdrop-filter: blur(18px) !important;
+      border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-radius: 0 !important;
+      padding: 0 6px !important;
+      box-sizing: border-box !important;
+      z-index: 99999 !important;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    /* 모바일에서 불필요한 POPUP, AppSheet 숨김 */
+    #quick-menu-nav .quick-nav-btn-popup,
+    #quick-menu-nav .quick-nav-btn-appsheet {
+      display: none !important;
+    }
+
+    /* 5대 핵심 버튼 공통 스타일 */
+    #quick-menu-nav .quick-nav-btn {
+      flex: 1 !important;
+      max-width: 72px !important;
+      height: 52px !important;
+      border-radius: 12px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 3px !important;
+      padding: 4px 2px !important;
+      margin: 0 !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      cursor: pointer !important;
+      text-decoration: none !important;
+      transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.1s ease !important;
+    }
+
+    /* [국장님 지침] 버튼 터치 시 실제 꾹 눌려지는 물리 피드백 */
+    #quick-menu-nav .quick-nav-btn:active {
+      transform: scale(0.88) translateY(3px) !important;
+      filter: brightness(0.8) !important;
+    }
+
+    #quick-menu-nav .q-icon {
+      font-size: 19px !important;
+      line-height: 1 !important;
+    }
+
+    #quick-menu-nav .q-text {
+      font-size: 10px !important;
+      font-weight: 700 !important;
+      color: #cbd5e1 !important;
+      white-space: nowrap !important;
+    }
+
+    /* 홈페이지 하단 패딩 확보 (퀵바에 가리지 않도록) */
+    #homepage-wrap {
+      padding-bottom: 74px !important;
+    }
+
+    /* 플로팅 BGM 및 Top 버튼 위치 조정 */
+    #homepage-bgm-btn {
+      bottom: 74px !important;
+      left: 16px !important;
+      width: 42px !important;
+      height: 42px !important;
+    }
+
+    #scrollTopBtn {
+      bottom: 74px !important;
+      right: 16px !important;
+    }
+
+    /* 7. ⭐ 가장 중요한 [메타버스 입장 시 모바일 최적화] */
+    #world-container {
+      width: 100vw !important;
+      height: 100vh !important;
+    }
+
+    /* 모바일 가상 조이스틱 110px 컴팩트 규격 */
+    #mobile-controls {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: flex-end !important;
+      bottom: 20px !important;
+      padding: 0 16px !important;
+      pointer-events: none !important;
+    }
+
+    #joystick-zone {
+      width: 120px !important;
+      height: 120px !important;
+      pointer-events: auto !important;
+    }
+
+    #joystick-base {
+      width: 105px !important;
+      height: 105px !important;
+      border: 2px solid rgba(255, 255, 255, 0.35) !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    #joystick-stick {
+      width: 44px !important;
+      height: 44px !important;
+      border: 2px solid rgba(255, 255, 255, 0.9) !important;
+    }
+
+    /* 모바일 액션 버튼 그룹 최적화 */
+    #mobile-actions {
+      pointer-events: auto !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: flex-end !important;
+      gap: 10px !important;
+    }
+
+    .mobile-action-grid {
+      display: grid !important;
+      grid-template-columns: repeat(2, 42px) !important;
+      gap: 8px !important;
+    }
+
+    .mobile-btn {
+      width: 42px !important;
+      height: 42px !important;
+      font-size: 14px !important;
+      font-weight: 800 !important;
+      border-radius: 50% !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+      transition: transform 0.1s ease !important;
+    }
+
+    .mobile-btn:active {
+      transform: scale(0.88) !important;
+      filter: brightness(0.85) !important;
+    }
+
+    /* 상단 존(Zone) 배너 슬림화 */
+    #zone-banner {
+      top: 15px !important;
+      max-width: calc(100vw - 32px) !important;
+      padding: 8px 14px !important;
+      border-radius: 12px !important;
+    }
+
+    #zone-title {
+      font-size: 15px !important;
+    }
+
+    #zone-desc {
+      font-size: 11px !important;
+    }
+
+    /* 퇴장 버튼(EXIT) 우측 상단 슬림 배치 */
+    #meta-exit-trigger {
+      top: 16px !important;
+      right: 16px !important;
+      bottom: auto !important;
+      padding: 6px 10px !important;
+      border-radius: 10px !important;
+      font-size: 11px !important;
     }
   }

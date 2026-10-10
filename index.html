@@ -1,8 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 
 <head>
-  <meta name="viewport" content="width=1280, user-scalable=yes">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="naver-site-verification" content="0ec9e0800331d6a3714b7c38b155a51d44aad967" />
 
   <meta name="description" content="장애인 거주시설 등대의집 홈페이지입니다. 따뜻한 사랑과 나눔이 있는 곳입니다.">
@@ -19,8 +20,9 @@
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+
   <link rel="stylesheet" href="style.css">
-<script>
+  <script>
     // [보강] 자바스크립트 로딩 전부터 에러 감시 (글로벌 감시용)
     window.onerror = function (msg, url, line) {
       const errLog = document.getElementById('error-log');
@@ -795,7 +797,6 @@
     </div>
   </div>
 
-  <!-- [BGM] 메타버스 배경음악 오디오 엘리먼트 + HUD 제어 버튼 -->
   <!-- [BGM] 홈페이지 배경음악 오디오 엘리먼트 -->
   <audio id="homepage-bgm" loop preload="none"></audio>
   <!-- [BGM] 메타버스 배경음악 오디오 엘리먼트 + HUD 제어 버튼 -->
@@ -947,7 +948,8 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="gas-bridge.js"></script>
   <script src="app.js"></script>
-<!-- [신규] 좌측 스크롤 네비게이터 (Dots) -->
+
+  <!-- [신규] 좌측 스크롤 네비게이터 (Dots) -->
   <div id="side-dots-nav" class="side-dots-nav">
     <div class="dot-item active" onclick="smoothScroll('sec-hero')" title="메인"></div>
     <div class="dot-item" onclick="smoothScroll('sec-about')" title="기관소개"></div>
@@ -1009,7 +1011,6 @@
 
   </div>
 
-  <!-- [신규] 상단 이동 버튼 (Top Button) -->
   <!-- [BGM] 홈페이지 배경음악 토글 버튼 (좌측 하단 플로팅) -->
   <button id="homepage-bgm-btn" class="homepage-bgm-btn" onclick="toggleHomepageBGM()" title="배경음악 ON/OFF">
     <span class="hp-bgm-icon">🎵</span>
