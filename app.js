@@ -982,6 +982,11 @@
 
     // Firebase DB 세션 정리 (연결 실패 시 건너뜀)
     const proceedToLoad = () => {
+    // [모바일 최적화] 메타버스 진입 시 뷰포트를 device-width로 전환
+      document.body.classList.add('metaverse-active');
+      const vp = document.getElementById('viewport-meta') || document.querySelector('meta[name="viewport"]');
+      if (vp) vp.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+
       // [수정] 메타버스 진입 팝업 공지 호출 (안정성을 위해 100ms 지연 호출)
       if (!state.noticeChecked) {
         state.noticeChecked = true;
@@ -4245,24 +4250,8 @@
   })();
 
 
-  // 모바일 메뉴 토글
-  function toggleMobileMenu(forceClose = false) {
-    const nav = document.getElementById('gnb-nav');
-    const overlay = document.getElementById('mobile-overlay');
-    const hamburger = document.querySelector('.hamburger');
 
-    if (forceClose || nav.classList.contains('open')) {
-      nav.classList.remove('open');
-      overlay.classList.remove('open');
-      if (hamburger) hamburger.classList.remove('open');
-      document.body.style.overflow = '';
-    } else {
-      nav.classList.add('open');
-      overlay.classList.add('open');
-      if (hamburger) hamburger.classList.add('open');
-      document.body.style.overflow = 'hidden';
-    }
-  } // ← toggleMobileMenu 함수 닫기
+
 
   // [v34.0] 활동갤러리 카테고리 버튼 렌더러 (순서 최적화: loadHomepageData보다 위로 이동)
   const GALLERY_CATEGORIES = ['전체', '일상생활', '교육/재활', '야외활동', '행사/이벤트', '나눔/소통'];
