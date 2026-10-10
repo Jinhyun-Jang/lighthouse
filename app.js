@@ -971,6 +971,13 @@
       state.avatar.isGhost = false;
     }
 
+    // [속도] 메타버스 데이터 요청을 Firebase 확인과 동시에 시작 (기존: Firebase 확인 후 순차 요청)
+    const metaReq = { data: null, error: null, onOk: null, onFail: null };
+    google.script.run
+      .withSuccessHandler(d => { metaReq.data = d; if (metaReq.onOk) metaReq.onOk(d); })
+      .withFailureHandler(e => { metaReq.error = e || new Error('메타버스 데이터 로드 실패'); if (metaReq.onFail) metaReq.onFail(metaReq.error); })
+      .getMetaverseData();
+
     // Firebase 초기화 (실패해도 계속 진행)
     try {
       if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -1019,9 +1026,8 @@
         }, 800);
       }
 
-      // 메타버스 데이터 로드
-      google.script.run
-        .withSuccessHandler(metaData => {
+      // 메타버스 데이터 (입장 클릭 시점에 이미 요청을 시작해 둠)
+      const onMeta = (metaData) => {
           state.mapConfigs = metaData.mapConfigs;
           state.zoneConfigs = metaData.zoneConfigs;
           state.charConfigs = metaData.charConfigs;
@@ -1030,17 +1036,16 @@
           state.aiBotConfig = metaData.aiBotConfig; // [신규] AIbot 탭 캐릭터 폴더 ID
           state.fountainConfig = metaData.fountainConfig || null; // [분수대] 폴더 ID
           state.cinemaConfig = metaData.cinemaConfig || null; // [시네마] 극장 조명 폴더 ID
-          // [BGM] 메타버스 전용 배경음악 백그라운드 로드 시작 (재생은 world-loading 종료 시점에)
+          // [속도] 메타버스 BGM(약 9MB)/발자국 음원은 입장 완료 후 내려받음 (맵 로딩 대역폭 확보)
           try {
             const bgmFileId = metaData.bgmConfigs && metaData.bgmConfigs.metaverseId;
-            if (bgmFileId) BGM.loadFromFileId(bgmFileId);
             const footstepCfg = metaData.bgmConfigs && metaData.bgmConfigs.all &&
               metaData.bgmConfigs.all.find(x => x.category === '발자국소리');
-            if (footstepCfg && footstepCfg.fileId) FOOTSTEP.loadFromFileId(footstepCfg.fileId);
+            state.pendingAudio = { bgm: bgmFileId || '', foot: (footstepCfg && footstepCfg.fileId) || '' };
           } catch (e) { console.warn('[BGM] 설정 준비 실패:', e); }
           showWorldLoading();
-        })
-        .withFailureHandler(err => {
+      };
+      const onMetaFail = (err) => {
           console.error('메타버스 데이터 로드 실패:', err);
           if (wlOverlay) wlOverlay.classList.add('overlay-hidden');
           if (homepageWrap) {
@@ -1048,8 +1053,10 @@
             setTimeout(() => { homepageWrap.style.opacity = '1'; homepageWrap.style.pointerEvents = 'auto'; }, 50);
           }
           alert('메타버스 데이터를 불러오지 못했습니다.\n새로고침 후 다시 시도해주세요.');
-        })
-        .getMetaverseData();
+      };
+      if (metaReq.data) onMeta(metaReq.data);
+      else if (metaReq.error) onMetaFail(metaReq.error);
+      else { metaReq.onOk = onMeta; metaReq.onFail = onMetaFail; }
     };
 
     if (db) {
@@ -1140,26 +1147,35 @@
         .getMapImageBase64(id);
     });
 
+    // [속도] 맵 배경·아바타·맵 이미지 5장을 동시에 내려받기 시작 (기존: 배경 → 아바타 → 맵 순차)
+    const pAvatar = loadSingleAvatar(state.avatar.personality);
+    const pColl = loadMapImg(cfg.collisionId);
+    const pFore = loadMapImg(cfg.foregroundId);
+    const pColor = loadMapImg(cfg.colorMapId);
+    const pObj = loadMapImg(cfg.objectMapId);
+    const pAi = loadMapImg(cfg.aiPathMapId);
+
     loadVisual().then(img => {
       if (!img) return;
-      return loadSingleAvatar(state.avatar.personality).then(() => img);
+      return pAvatar.then(() => img);
     }).then(img => {
       if (!img) return;
       // 충돌/가림은 필수, 컬러/오브젝트는 실패해도 진행
       return Promise.all([
-        loadMapImg(cfg.collisionId).then(cImg => { if (cImg) analyzeCollisions(cImg, img.width, img.height); }),
-        loadMapImg(cfg.foregroundId).then(fImg => { if (fImg) analyzeForeground(fImg, img.width, img.height); }),
-        loadMapImg(cfg.colorMapId).then(cMapImg => { if (cMapImg) analyzeColorMap(cMapImg, img.width, img.height); }),
-        loadMapImg(cfg.objectMapId).then(oImg => { if (oImg) analyzeObjectMap(oImg, img.width, img.height); }),
-        loadMapImg(cfg.aiPathMapId).then(aImg => { if (aImg) analyzeAIPathMap(aImg, img.width, img.height); }),
-        loadAIBotAvatar(),
-        loadFountainImages(),
-        loadCinemaImages()
+        pColl.then(cImg => { if (cImg) analyzeCollisions(cImg, img.width, img.height); }),
+        pFore.then(fImg => { if (fImg) analyzeForeground(fImg, img.width, img.height); }),
+        pColor.then(cMapImg => { if (cMapImg) analyzeColorMap(cMapImg, img.width, img.height); }),
+        pObj.then(oImg => { if (oImg) analyzeObjectMap(oImg, img.width, img.height); }),
+        pAi.then(aImg => { if (aImg) analyzeAIPathMap(aImg, img.width, img.height); })
       ]);
     }).then(() => {
       state.mapLoaded = true;
       state.avatar.spawnTimer = 2.0;
       setTimeout(hideWorldLoading, 200);
+      // [속도] 장식(AI봇·분수대·시네마 프레임 24장)은 입장 완료 후 내려받아 준비되는 대로 표시
+      loadAIBotAvatar();
+      loadFountainImages();
+      loadCinemaImages();
       // [v24.0] 입장 직후 3회 연속 강제 전송 — 다른 접속자에게 내 존재를 확실히 알림
       syncMyPosition(true);
       setTimeout(() => syncMyPosition(true), 500);
@@ -1575,6 +1591,16 @@
       if (btn) btn.style.display = 'flex';
       if (BGM.ready) BGM.play();
     } catch (e) { console.warn('[BGM] 재생 시도 실패:', e); }
+
+    // [속도] 입장 완료 후 메타버스 음원 내려받기 시작 (준비되는 즉시 재생)
+    try {
+      if (state.pendingAudio) {
+        const pa = state.pendingAudio;
+        state.pendingAudio = null;
+        if (pa.bgm) BGM.loadFromFileId(pa.bgm);
+        if (pa.foot) FOOTSTEP.loadFromFileId(pa.foot);
+      }
+    } catch (e) { console.warn('[BGM] 음원 로드 시작 실패:', e); }
 
     // [v35.5] 맵 로딩 완료 0.5초 후 네비게이션 서서히 등장
     setTimeout(() => {
