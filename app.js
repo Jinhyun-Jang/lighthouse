@@ -1562,6 +1562,17 @@
     const overlay = document.getElementById('world-loading-overlay');
     if (overlay) overlay.classList.remove('overlay-hidden');
     initWorld(); // 데이터 로딩 시작
+
+    // [BGM] 로딩 시작 4.5초 후 음악 미리 재생 시도 (ready 상태이면 즉시 재생)
+    setTimeout(() => {
+      try {
+        const isPlaying = !!(BGM.el && !BGM.el.paused);
+        if (BGM.ready && !isPlaying) {
+          BGM.play();
+          console.log('[BGM] 로딩 중 선재생 시작 (4.5초)');
+        }
+      } catch (e) { console.warn('[BGM] 로딩 중 선재생 실패:', e); }
+    }, 4500);
   }
 
   function hideWorldLoading() {
