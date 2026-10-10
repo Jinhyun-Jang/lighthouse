@@ -80,6 +80,7 @@
     overflow-x: hidden;
     margin: 0;
     padding: 0;
+    min-width: 1280px;
   }
 
   /* [v10.0] 메타버스 컨테이너 풀스크린 고정 */
