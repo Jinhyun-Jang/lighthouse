@@ -278,6 +278,16 @@
     ]
   };
 
+  /* [속도] 정적 음원 스트리밍: 사이트에 올려둔 audio/<구글드라이브 파일ID>.mp3 를 바로 재생(서버 Base64 변환 불필요).
+     파일이 없거나 재생 불가(error)이면 onMissing() 으로 기존 Base64 방식 대체. 아이폰은 사용자 터치 전에는 미리 받지 않으므로
+     로드 완료를 기다리지 않고 즉시 ready 로 간주한다. */
+  function useStaticAudio(el, fileId, onMissing) {
+    el.preload = 'auto';
+    const onErr = () => { el.removeEventListener('error', onErr); try { onMissing(); } catch (e) { console.warn('[AUDIO] 대체 로드 실패:', e); } };
+    el.addEventListener('error', onErr);
+    el.src = 'audio/' + fileId + '.mp3';
+  }
+
   /* ════════════════════════════════════════════════════════════
      [HOMEPAGE BGM MODULE] 홈페이지 배경음악 엔진
      - 기본값은 "켜짐(음소거 아님)" 상태이며, 접속 즉시 재생을 시도한다.
@@ -365,7 +375,7 @@
       if (!this.el || !fileId) return;
       if (this.ready && this.currentId === fileId) return;
       if (typeof google === 'undefined' || !google.script) return;
-      google.script.run
+      const legacy = () => google.script.run
         .withSuccessHandler(res => {
           if (!res || !res.success) {
             console.warn('[HP_BGM] 음원 로드 실패:', res && res.error);
@@ -378,6 +388,13 @@
         })
         .withFailureHandler(err => console.warn('[HP_BGM] 음원 요청 실패:', err))
         .getAudioBase64(fileId);
+      useStaticAudio(this.el, fileId, legacy);
+      this.currentId = fileId;
+      try { localStorage.setItem('hp_bgm_id', fileId); } catch (e) { }
+      this.ready = true;
+      const hpBtn = document.getElementById('homepage-bgm-btn');
+      if (hpBtn) hpBtn.style.display = 'flex';
+      if (!this.suspended) this.play();
     },
     play() {
       this.init();
@@ -458,6 +475,9 @@
     el: null,
     ready: false,
     worldVisible: false,
+    entering: false,
+    pendingLegacy: null,
+    currentId: '',
     init() {
       if (this.el) return;
       this.el = document.getElementById('metaverse-bgm');
@@ -468,7 +488,9 @@
     loadFromFileId(fileId) {
       this.init();
       if (!this.el || !fileId) return;
-      google.script.run
+      if (this.currentId === fileId) return;
+      this.currentId = fileId;
+      const legacy = () => google.script.run
         .withSuccessHandler(res => {
           if (!res || !res.success) {
             console.warn('[BGM] 음원 로드 실패:', res && res.error);
@@ -476,10 +498,16 @@
           }
           this.el.src = 'data:' + res.mimeType + ';base64,' + res.base64;
           this.ready = true;
-          if (this.worldVisible) this.play();
+          if (this.worldVisible || this.entering) this.play();
         })
         .withFailureHandler(err => console.warn('[BGM] 음원 요청 실패:', err))
         .getAudioBase64(fileId);
+      // [속도] 정적 mp3 스트리밍으로 즉시 재생 — 파일이 없으면 입장 완료 후 기존 Base64 방식으로 대체
+      useStaticAudio(this.el, fileId, () => {
+        if (this.worldVisible) legacy(); else this.pendingLegacy = legacy;
+      });
+      this.ready = true;
+      if (this.worldVisible || this.entering) this.play();
     },
     play() {
       this.init();
@@ -494,6 +522,7 @@
       this.el.pause();
       this.el.currentTime = 0;
       this.worldVisible = false;
+      this.entering = false;
       this.updateIcon();
     },
     toggle() {
@@ -1010,6 +1039,7 @@
         if (hpBtn) hpBtn.style.display = 'none';
       } catch (e) { console.warn('[HP_BGM] 정지 실패:', e); }
 
+      BGM.entering = true; // [BGM] 입장 클릭(사용자 제스처) 직후부터 재생 허용 — 로딩 화면부터 음악
       // 즉시 로딩 화면 표시
       if (wlOverlay) wlOverlay.classList.remove('overlay-hidden');
 
@@ -1041,7 +1071,8 @@
             const bgmFileId = metaData.bgmConfigs && metaData.bgmConfigs.metaverseId;
             const footstepCfg = metaData.bgmConfigs && metaData.bgmConfigs.all &&
               metaData.bgmConfigs.all.find(x => x.category === '발자국소리');
-            state.pendingAudio = { bgm: bgmFileId || '', foot: (footstepCfg && footstepCfg.fileId) || '' };
+            if (bgmFileId) BGM.loadFromFileId(bgmFileId); // 정적 스트리밍이라 입장 로딩에 부담 없음
+            state.pendingAudio = { bgm: '', foot: (footstepCfg && footstepCfg.fileId) || '' };
           } catch (e) { console.warn('[BGM] 설정 준비 실패:', e); }
           showWorldLoading();
       };
@@ -1587,6 +1618,7 @@
     // [BGM] 월드 진입 완료 시점(=입장하기 클릭 제스처 체인 내)에 재생 시도 + HUD 버튼 노출
     try {
       BGM.worldVisible = true;
+      if (BGM.pendingLegacy) { const lg = BGM.pendingLegacy; BGM.pendingLegacy = null; lg(); }
       const btn = document.getElementById('hud-bgm-btn');
       if (btn) btn.style.display = 'flex';
       if (BGM.ready) BGM.play();
